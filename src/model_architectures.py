@@ -77,6 +77,7 @@ class FCCNetwork(nn.Module):
 
         self.logits_linear_layer.reset_parameters()
 
+
 class ConvolutionalNetwork(nn.Module):
     def __init__(self, input_shape, dim_reduction_type, num_output_classes, num_filters, num_layers, use_bias=False):
         """
@@ -206,3 +207,50 @@ class ConvolutionalNetwork(nn.Module):
                 pass
 
         self.logit_linear_layer.reset_parameters()
+
+
+class BHCNetwork(nn.Module):
+    #TODO: Fill this out
+    def __init__(self, input_shape, dim_reduction_type, num_output_classes, num_filters, num_layers, use_bias=True):
+        """
+
+        :param input_shape:
+        :param dim_reduction_type:
+        :param num_output_classes:
+        :param num_filters:
+        :param num_layers:
+        :param use_bias:
+        """
+        super(BHCNetwork, self).__init__()
+        # set up class attributes useful in building the network and inference
+        self.input_shape = input_shape
+        self.num_filters = num_filters
+        self.num_output_classes = num_output_classes
+        self.use_bias = use_bias
+        self.num_layers = num_layers
+        self.dim_reduction_type = dim_reduction_type
+        # initialize a module dict, which is effectively a dictionary that can collect layers and integrate them into pytorch
+        self.layer_dict = nn.ModuleDict()
+        # build the network
+        self.build_module()
+
+
+    def build_module(self):
+        """
+            Input SE Block
+            SE_Small_Block [224x224x16] N times
+            SE_Small_Block [112x112x32] N times
+            SE_Small_Block [56x56x64] N times
+            Global Pooling
+            FC Layer
+            Softmax
+        """
+        return 0
+
+    def forward(self, x):
+        return 0
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
