@@ -1,8 +1,10 @@
 import argparse
 import json
-import os
 import sys
-import GPUtil
+
+'''
+Argument extractor. This is a modified version of the files found in https://github.com/CSTR-Edinburgh/mlpractical.
+'''
 
 
 class AttributeAccessibleDict(object):

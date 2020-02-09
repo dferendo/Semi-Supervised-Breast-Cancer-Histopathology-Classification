@@ -2,6 +2,11 @@ import pickle
 import os
 import csv
 
+'''
+Saving weights and training statistics. This is a modified version of the files 
+found in https://github.com/CSTR-Edinburgh/mlpractical.
+'''
+
 
 def save_to_stats_pkl_file(experiment_log_filepath, filename, stats_dict):
     summary_filename = os.path.join(experiment_log_filepath, filename)
