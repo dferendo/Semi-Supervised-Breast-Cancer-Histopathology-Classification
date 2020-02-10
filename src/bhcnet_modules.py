@@ -5,12 +5,13 @@ import torch.nn.functional as F
 
 
 class Squeeze_Excite_Layer(nn.Module):
-    def __init__(self, input_shape, reduction=16):
+    def __init__(self, input_shape, reduction=16, use_bias=False):
         super(Squeeze_Excite_Layer, self).__init__()
 
         self.input_shape = input_shape
         self.reduction = reduction
         self.channels = self.input_shape[1]
+        self.use_bias = use_bias
         self.layer_dict = nn.ModuleDict()
 
         # build the network
@@ -23,9 +24,9 @@ class Squeeze_Excite_Layer(nn.Module):
 
         self.layer_dict['se_global_avg_pool'] = nn.AdaptiveAvgPool2d(1)
         self.layer_dict['se_fc'] = nn.Sequential(
-            nn.Linear(self.channels, self.channels // self.reduction, bias=False),
+            nn.Linear(self.channels, self.channels // self.reduction, bias=self.use_bias),
             nn.ReLU(inplace=True),
-            nn.Linear(self.channels // self.reduction, self.channels, bias=False),
+            nn.Linear(self.channels // self.reduction, self.channels, bias=self.use_bias),
             nn.Sigmoid()
         )
 
@@ -92,26 +93,38 @@ class Small_SE_Block(nn.Module):
         # se = Squeeze_Excite_Layer(conv4)
 
 
-class First_Convolution_Block(nn.Module):
-    def __init__(self, input_shape, dim_reduction_type, num_output_classes, num_filters, num_layers, use_bias=True):
-        super(First_Convolution_Block, self).__init__()
+class Input_Convolution_Block(nn.Module):
+    def __init__(self, input_shape, num_filters, use_bias=True):
+        super(Input_Convolution_Block, self).__init__()
 
         self.input_shape = input_shape
         self.num_filters = num_filters
-        self.num_output_classes = num_output_classes
         self.use_bias = use_bias
-        self.num_layers = num_layers
-        self.dim_reduction_type = dim_reduction_type
         # initialize a module dict, which is effectively a dictionary that can collect layers and integrate them into pytorch
         self.layer_dict = nn.ModuleDict()
         # build the network
         self.build_module()
 
     def build_module(self):
+        print("Building First_Convolutional_Block in BHCNet with input shape %s" % (self.input_shape,))
+
         x = torch.zeros((self.input_shape))
         out = x
 
-        conv1 = nn.Conv2d(in_channels=out.shape[1], kernel_size=3, out_channels=out.shape[1], padding=1,
+        self.layer_dict['conv_0'] = nn.Conv2d(in_channels=self.input_shape[1], kernel_size=3, out_channels=self.num_filters, padding=1,
                           bias=self.use_bias, stride=1, dilation=1)
-        # TODO: batch norm
-        # TODO: ReLU
+        out = self.layer_dict['conv_0'].forward(out)
+
+        self.layer_dict['bn_0'] = nn.BatchNorm2d(num_features=out.shape[1])
+        out = self.layer_dict['bn_0'].forward(out)
+
+        out = F.relu(out)
+
+        return out
+
+    def forward(self, x):
+        out = x
+        out = self.layer_dict['conv_0'].forward(out)
+        out = self.layer_dict['bn_0'].forward(out)
+        out = F.relu(out)
+        return out
