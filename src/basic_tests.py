@@ -1,9 +1,9 @@
 import torch
-from src.bhcnet_modules import Squeeze_Excite_Layer, Input_Convolution_Block, Small_SE_Block
+from src.bhcnet_modules import SqueezeExciteLayer, InputConvolutionBlock, SmallSeBlock
 
 input_shape = (2,16,224,224)
 x = torch.rand(input_shape)
-# model = Squeeze_Excite_Layer(input_shape=input_shape, reduction=2)
-# model = Input_Convolution_Block(input_shape, num_filters=5, use_bias=True)
-model = Small_SE_Block(input_shape, None, 10, use_bias=True,
-                       reduction=2, perform_downsampling=True, is_first_layer=False)
+# model = SqueezeExciteLayer(input_shape=input_shape, reduction=2)
+# model = InputConvolutionBlock(input_shape, num_filters=5, use_bias=True)
+model = SmallSeBlock(input_shape, None, 10, use_bias=True,
+                     reduction=2, perform_downsampling=True, is_first_layer=False)
