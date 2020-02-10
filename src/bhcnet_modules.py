@@ -55,9 +55,8 @@ class Squeeze_Excite_Layer(nn.Module):
 
 
 class Small_SE_Block(nn.Module):
-    # TODO: Fix dimensionality
     def __init__(self, input_shape, dim_reduction_type, num_filters, use_bias=True,
-                 reduction=16, is_first_block=False):
+                 reduction=16, perform_downsampling=False, is_first_layer=False):
         super(Small_SE_Block, self).__init__()
 
         self.input_shape = input_shape
@@ -65,7 +64,8 @@ class Small_SE_Block(nn.Module):
         self.use_bias = use_bias
         self.dim_reduction_type = dim_reduction_type
         self.reduction = reduction
-        self.is_first_block = is_first_block
+        self.perform_downsampling = perform_downsampling
+        self.is_first_layer = is_first_layer
         # initialize a module dict, which is effectively a dictionary that can collect layers and integrate them into pytorch
         self.layer_dict = nn.ModuleDict()
         # build the network
@@ -74,10 +74,15 @@ class Small_SE_Block(nn.Module):
     def build_module(self):
         print('Building Small_SE_Block with input shape %s reduction factor %d' % (self.input_shape, self.reduction))
 
-        stride_red = 2 if self.is_first_block else 1
+        stride_red = 2 if self.perform_downsampling else 1
 
         x = torch.zeros((self.input_shape))
         out = x
+
+        if not self.is_first_layer:
+            self.layer_dict['bn_0'] = nn.BatchNorm2d(num_features=out.shape[1])
+            self.layer_dict['bn_0'].forward(out)
+            out = F.relu(out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=self.num_filters, padding=(0,1),
                           bias=self.use_bias, stride=stride_red, dilation=1)
@@ -114,6 +119,10 @@ class Small_SE_Block(nn.Module):
 
     def forward(self, x):
         out = x
+
+        if not self.is_first_layer:
+            self.layer_dict['bn_0'].forward(out)
+            out = F.relu(out)
 
         out = self.layer_dict['conv_1'].forward(out)
 
