@@ -4,9 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# TODO: Make activation functions assignable via parameter
-# TODO: Fill out the methods
-
 class Squeeze_Excite_Layer(nn.Module):
     def __init__(self, input_shape, reduction=16):
         super(Squeeze_Excite_Layer, self).__init__()
@@ -57,6 +54,7 @@ class Squeeze_Excite_Layer(nn.Module):
 
 
 class Small_SE_Block(nn.Module):
+    # TODO: Fill out the methods
     def __init__(self, input_shape, dim_reduction_type, num_output_classes, num_filters, num_layers, use_bias=True,
                  reduction=16, is_first_block=False):
         super(Small_SE_Block, self).__init__()
