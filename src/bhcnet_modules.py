@@ -120,6 +120,16 @@ class SmallSeBlock(nn.Module):
         self.layer_dict['se_1'] = SqueezeExciteLayer(out.shape, reduction=self.reduction, use_bias=False)
         out = self.layer_dict['se_1'].forward(out)
 
+        if self.residual_conv_reshape_required(x, out):
+            stride_width = int(round(x.shape[2] / out.shape[2]))
+            stride_height = int(round(x.shape[3] / out.shape[3]))
+            self.layer_dict['conv_resid_reduc'] = nn.Conv2d(in_channels=x.shape[1], kernel_size=(1, 1),
+                                                            out_channels=out.shape[1],padding=0,
+                                                            bias=self.use_bias, stride=(stride_height, stride_width), dilation=1)
+            x = self.layer_dict['conv_resid_reduc'].forward(x)
+
+        out = x + out
+
         return out
 
     def forward(self, x):
@@ -145,7 +155,23 @@ class SmallSeBlock(nn.Module):
 
         out = self.layer_dict['se_1'].forward(out)
 
+        if self.residual_conv_reshape_required(x, out):
+            x = self.layer_dict['conv_resid_reduc'].forward(x)
+
+        out = x + out
+
         return out
+
+    def residual_conv_reshape_required(self, input, residual):
+        input_shape = input.shape
+        residual_shape = residual.shape
+        stride_width = int(round(input_shape[2] / residual_shape[2]))
+        stride_height = int(round(input_shape[3] / residual_shape[3]))
+        equal_channels = input_shape[1] == residual_shape[1]
+
+        if stride_width > 1 or stride_height > 1 or not equal_channels:
+            return True
+        return False
 
 
 class InputConvolutionBlock(nn.Module):
