@@ -8,7 +8,6 @@ import torch.nn.functional as F
 # TODO: Fill out the methods
 
 class Squeeze_Excite_Layer(nn.Module):
-    # TODO: FIX and UPDATE
     def __init__(self, input_shape, reduction=16):
         super(Squeeze_Excite_Layer, self).__init__()
 
@@ -21,6 +20,8 @@ class Squeeze_Excite_Layer(nn.Module):
         self.build_module()
 
     def build_module(self):
+        print("Building Squeeze_Excite_Layer with shape %s and reduction factor %d" % (self.input_shape, self.reduction))
+
         x = torch.zeros((self.input_shape))
 
         self.layer_dict['se_global_avg_pool'] = nn.AdaptiveAvgPool2d(1)
@@ -31,24 +32,29 @@ class Squeeze_Excite_Layer(nn.Module):
             nn.Sigmoid()
         )
 
-        w = self.layer_dict['se_global_avg_pool'].forward(x).view(self.input_shape[0], self.input_shape[1])
-        w = self.layer_dict['se_fc'].forward(w).view(self.input_shape[0], self.input_shape[1], 1, 1)
+        w = self.layer_dict['se_global_avg_pool']\
+            .forward(x)\
+            .view(self.input_shape[0], self.input_shape[1])
+        w = self.layer_dict['se_fc'].forward(w)\
+            .view(self.input_shape[0], self.input_shape[1], 1, 1)\
+            .expand_as(x)
 
-        out = x * w.expand_as(x)
+        out = torch.mul(x, w)
 
         return out
 
     def forward(self, x):
-        # b, c, _, _ = x.size()
-        # y = self.avg_pool(x).view(b, c)
-        # y = self.fc(y).view(b, c, 1, 1)
-        # return x * y.expand_as(x)
-        w = self.layer_dict['se_global_avg_pool'].forward(x).view(self.input_shape[0], self.input_shape[1])
-        w = self.layer_dict['se_fc'].forward(w).view(self.input_shape[0], self.input_shape[1], 1, 1)
+        w = self.layer_dict['se_global_avg_pool']\
+            .forward(x)\
+            .view(self.input_shape[0], self.input_shape[1])
+        w = self.layer_dict['se_fc'].forward(w)\
+            .view(self.input_shape[0], self.input_shape[1], 1, 1)\
+            .expand_as(x)
 
-        out = x * w.expand_as(x)
+        out = torch.mul(x, w)
 
         return out
+
 
 class Small_SE_Block(nn.Module):
     def __init__(self, input_shape, dim_reduction_type, num_output_classes, num_filters, num_layers, use_bias=True,
