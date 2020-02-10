@@ -55,16 +55,14 @@ class Squeeze_Excite_Layer(nn.Module):
 
 
 class Small_SE_Block(nn.Module):
-    # TODO: Fill out the methods
-    def __init__(self, input_shape, dim_reduction_type, num_output_classes, num_filters, num_layers, use_bias=True,
+    # TODO: Fix dimensionality
+    def __init__(self, input_shape, dim_reduction_type, num_filters, use_bias=True,
                  reduction=16, is_first_block=False):
         super(Small_SE_Block, self).__init__()
 
         self.input_shape = input_shape
         self.num_filters = num_filters
-        self.num_output_classes = num_output_classes
         self.use_bias = use_bias
-        self.num_layers = num_layers
         self.dim_reduction_type = dim_reduction_type
         self.reduction = reduction
         self.is_first_block = is_first_block
@@ -74,24 +72,66 @@ class Small_SE_Block(nn.Module):
         self.build_module()
 
     def build_module(self):
-        x = torch.zeros((self.input_shape))
-        out = x
+        print('Building Small_SE_Block with input shape %s reduction factor %d' % (self.input_shape, self.reduction))
 
         stride_red = 2 if self.is_first_block else 1
 
-        # TODO: First convolution needs to double to channels and half the feature size if it is the first layer in the block
-        # TODO: Add batch norm followed by relu before each convolution
+        x = torch.zeros((self.input_shape))
+        out = x
 
-        conv1 = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=out.shape[1], padding=1,
+        self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=self.num_filters, padding=1,
                           bias=self.use_bias, stride=stride_red, dilation=1)
-        conv2 = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=1,
-                          bias=self.use_bias, stride=stride_red, dilation=1)
-        conv3 = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=out.shape[1], padding=1,
-                          bias=self.use_bias, stride=stride_red, dilation=1)
-        conv4 = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=1,
-                          bias=self.use_bias, stride=stride_red, dilation=1)
-        # se = Squeeze_Excite_Layer(conv4)
+        out = self.layer_dict['conv_1'].forward(out)
 
+        self.layer_dict['bn_1'] = nn.BatchNorm2d(num_features=out.shape[1])
+        self.layer_dict['bn_1'].forward(out)
+        out = F.relu(out)
+
+        self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=1,
+                          bias=self.use_bias, stride=1, dilation=1)
+        out = self.layer_dict['conv_2'].forward(out)
+
+        self.layer_dict['bn_2'] = nn.BatchNorm2d(num_features=out.shape[1])
+        self.layer_dict['bn_2'].forward(out)
+        out = F.relu(out)
+
+        self.layer_dict['conv_3'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=out.shape[1], padding=1,
+                          bias=self.use_bias, stride=1, dilation=1)
+        out = self.layer_dict['conv_3'].forward(out)
+
+        self.layer_dict['bn_3'] = nn.BatchNorm2d(num_features=out.shape[1])
+        self.layer_dict['bn_3'].forward(out)
+        out = F.relu(out)
+
+        self.layer_dict['conv_4'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=1,
+                          bias=self.use_bias, stride=1, dilation=1)
+        out = self.layer_dict['conv_4'].forward(out)
+
+        self.layer_dict['se_1'] = Squeeze_Excite_Layer(out.shape, reduction=self.reduction, use_bias=False)
+        out = self.layer_dict['se_1'].forward(out)
+
+        return out
+
+    def forward(self, x):
+        out = x
+
+        out = self.layer_dict['conv_1'].forward(out)
+
+        self.layer_dict['bn_1'].forward(out)
+        out = F.relu(out)
+        out = self.layer_dict['conv_2'].forward(out)
+
+        self.layer_dict['bn_2'].forward(out)
+        out = F.relu(out)
+        out = self.layer_dict['conv_3'].forward(out)
+
+        self.layer_dict['bn_3'].forward(out)
+        out = F.relu(out)
+        out = self.layer_dict['conv_4'].forward(out)
+
+        out = self.layer_dict['se_1'].forward(out)
+
+        return out
 
 class Input_Convolution_Block(nn.Module):
     def __init__(self, input_shape, num_filters, use_bias=True):
@@ -111,7 +151,7 @@ class Input_Convolution_Block(nn.Module):
         x = torch.zeros((self.input_shape))
         out = x
 
-        self.layer_dict['conv_0'] = nn.Conv2d(in_channels=self.input_shape[1], kernel_size=3, out_channels=self.num_filters, padding=1,
+        self.layer_dict['conv_0'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=3, out_channels=self.num_filters, padding=1,
                           bias=self.use_bias, stride=1, dilation=1)
         out = self.layer_dict['conv_0'].forward(out)
 
