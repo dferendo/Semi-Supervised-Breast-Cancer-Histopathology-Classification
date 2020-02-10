@@ -79,7 +79,7 @@ class Small_SE_Block(nn.Module):
         x = torch.zeros((self.input_shape))
         out = x
 
-        self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=self.num_filters, padding=1,
+        self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=self.num_filters, padding=(0,1),
                           bias=self.use_bias, stride=stride_red, dilation=1)
         out = self.layer_dict['conv_1'].forward(out)
 
@@ -87,7 +87,7 @@ class Small_SE_Block(nn.Module):
         self.layer_dict['bn_1'].forward(out)
         out = F.relu(out)
 
-        self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=1,
+        self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=(1,0),
                           bias=self.use_bias, stride=1, dilation=1)
         out = self.layer_dict['conv_2'].forward(out)
 
@@ -95,7 +95,7 @@ class Small_SE_Block(nn.Module):
         self.layer_dict['bn_2'].forward(out)
         out = F.relu(out)
 
-        self.layer_dict['conv_3'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=out.shape[1], padding=1,
+        self.layer_dict['conv_3'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=out.shape[1], padding=(0,1),
                           bias=self.use_bias, stride=1, dilation=1)
         out = self.layer_dict['conv_3'].forward(out)
 
@@ -103,7 +103,7 @@ class Small_SE_Block(nn.Module):
         self.layer_dict['bn_3'].forward(out)
         out = F.relu(out)
 
-        self.layer_dict['conv_4'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=1,
+        self.layer_dict['conv_4'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1], padding=(1,0),
                           bias=self.use_bias, stride=1, dilation=1)
         out = self.layer_dict['conv_4'].forward(out)
 
