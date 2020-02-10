@@ -20,7 +20,7 @@ class Squeeze_Excite_Layer(nn.Module):
         self.build_module()
 
     def build_module(self):
-        print("Building Squeeze_Excite_Layer with shape %s and reduction factor %d" % (self.input_shape, self.reduction))
+        print("Building Squeeze_Excite_Layer with in and out shape %s and reduction factor %d" % (self.input_shape, self.reduction))
 
         x = torch.zeros((self.input_shape))
 
