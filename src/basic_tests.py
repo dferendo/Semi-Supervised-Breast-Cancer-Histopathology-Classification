@@ -3,7 +3,7 @@ from src.bhcnet_modules import SqueezeExciteLayer, InputConvolutionBlock, SmallS
 from src.model_architectures import BHCNetwork
 
 
-input_shape = (2,3,224,224)
+input_shape = (100,3,224,224)
 x = torch.rand(input_shape)
 model = BHCNetwork(input_shape, 2, 16, 2, use_bias=True)
 # model = SqueezeExciteLayer(input_shape=input_shape, reduction=2)
