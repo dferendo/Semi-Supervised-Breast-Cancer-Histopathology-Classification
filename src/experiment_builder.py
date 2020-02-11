@@ -8,14 +8,16 @@ import tqdm
 import os
 import numpy as np
 import time
+from torch.optim import SGD
 
 from torch.optim.adam import Adam
+from src.ERF_Scheduler import ERF
 
 from storage_utils import save_statistics
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, weight_decay_coefficient, use_gpu, continue_from_epoch=-1):
+                 test_data, weight_decay_coefficient, use_gpu, continue_from_epoch=-1, scheduler_choice=None):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -55,8 +57,15 @@ class ExperimentBuilder(nn.Module):
         self.train_data = train_data
         self.val_data = val_data
         self.test_data = test_data
-        self.optimizer = Adam(self.parameters(), amsgrad=False,
+
+        if scheduler_choice is None:
+            self.optimizer = Adam(self.parameters(), amsgrad=False,
                                     weight_decay=weight_decay_coefficient)
+            self.scheduler = None
+        elif scheduler_choice == 'ERF':
+            self.optimizer = SGD(self.parameters(), lr=0.1,
+                            momentum=0.9, nesterov=True, weight_decay=weight_decay_coefficient)
+            self.scheduler = ERF(self.optimizer, min_lr=0.0001, alpha=-3, beta=3, epochs=num_epochs)
 
         print('System learnable parameters')
         num_conv_layers = 0
@@ -254,6 +263,9 @@ class ExperimentBuilder(nn.Module):
 
             current_epoch_losses = self.run_training_epoch(current_epoch_losses)
             current_epoch_losses = self.run_validation_epoch(current_epoch_losses)
+
+            if self.scheduler is not None:
+                self.scheduler.step()
 
             val_mean_accuracy = np.mean(current_epoch_losses['val_acc'])
             if val_mean_accuracy > self.best_val_model_acc:  # if current epoch's mean val acc is greater than the saved best val acc then
