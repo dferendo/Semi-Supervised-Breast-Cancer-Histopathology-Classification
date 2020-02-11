@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.bhcnet_modules import InputConvolutionBlock,SmallSeBlock
+from bhcnet_modules import InputConvolutionBlock, SmallSeBlock
 
 class FCCNetwork(nn.Module):
     def __init__(self, input_shape, num_output_classes, num_filters, num_layers, use_bias=False):

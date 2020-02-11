@@ -11,7 +11,7 @@ import time
 from torch.optim import SGD
 
 from torch.optim.adam import Adam
-from src.ERF_Scheduler import ERF
+from ERF_Scheduler import ERF
 
 from storage_utils import save_statistics
 
@@ -38,6 +38,7 @@ class ExperimentBuilder(nn.Module):
         self.model = network_model
         self.model.reset_parameters()
         self.device = torch.cuda.current_device()
+
 
         if torch.cuda.device_count() > 1 and use_gpu:
             self.device = torch.cuda.current_device()
