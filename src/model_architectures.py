@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from src.bhcnet_modules import InputConvolutionBlock,SmallSeBlock
 
 class FCCNetwork(nn.Module):
     def __init__(self, input_shape, num_output_classes, num_filters, num_layers, use_bias=False):
@@ -210,10 +210,8 @@ class ConvolutionalNetwork(nn.Module):
 
 
 class BHCNetwork(nn.Module):
-    #TODO: Fill this out
-    def __init__(self, input_shape, dim_reduction_type, num_output_classes, num_filters, num_layers, use_bias=True):
+    def __init__(self, input_shape, num_output_classes, num_filters, num_layers, use_bias=True):
         """
-
         :param input_shape:
         :param dim_reduction_type:
         :param num_output_classes:
@@ -228,29 +226,78 @@ class BHCNetwork(nn.Module):
         self.num_output_classes = num_output_classes
         self.use_bias = use_bias
         self.num_layers = num_layers
-        self.dim_reduction_type = dim_reduction_type
         # initialize a module dict, which is effectively a dictionary that can collect layers and integrate them into pytorch
         self.layer_dict = nn.ModuleDict()
         # build the network
         self.build_module()
 
-
     def build_module(self):
-        """
-            Input SE Block
-            SE_Small_Block [224x224x16] N times
-            SE_Small_Block [112x112x32] N times
-            SE_Small_Block [56x56x64] N times
-            Global Pooling
-            FC Layer
-            Softmax
-        """
-        return 0
+        print("Building BHCNet with input shape %s" % (self.input_shape,))
+
+        x = torch.zeros(self.input_shape)
+        out = x
+
+        self.layer_dict['conv_in'] = InputConvolutionBlock(input_shape=out.shape, num_filters=self.num_filters, use_bias=True)
+        out = self.layer_dict['conv_in'].forward(out)
+
+        num_filters = out.shape[1]
+        for block_num in range(3):
+            for layer_num in range(self.num_layers):
+                self.layer_dict['small_senet_b%d_l%d'%(block_num, layer_num)]= \
+                    SmallSeBlock(input_shape=out.shape, num_filters=num_filters, use_bias=True,
+                                 reduction=16, perform_downsampling=layer_num==0 and not block_num==0,
+                                 is_first_layer=block_num==0 and layer_num ==0)
+                out = self.layer_dict['small_senet_b%d_l%d' % (block_num, layer_num)].forward(out)
+            num_filters*=2
+
+        self.layer_dict['final_bn'] = nn.BatchNorm2d(num_features=out.shape[1])
+        self.layer_dict['final_bn'].forward(out)
+        out = F.relu(out)
+
+        print('shape after final small_senet block', out.shape)
+
+        self.layer_dict['final_global_dimred'] = nn.AdaptiveAvgPool2d(1)
+        out = self.layer_dict['final_global_dimred'].forward(out)
+
+        out = out.view(out.shape[0], -1)
+        print('shape before final linear layer', out.shape)
+
+        self.layer_dict['final_fc'] = nn.Linear(in_features=out.shape[1],
+                                                out_features=self.num_output_classes,
+                                                bias=self.use_bias)
+        out = self.layer_dict['final_fc'].forward(out)
+
+        return out
 
     def forward(self, x):
-        return 0
+        out = x
+        out = self.layer_dict['conv_in'].forward(out)
+
+        num_filters = out.shape[1]
+        for block_num in range(3):
+            for layer_num in self.num_layers:
+                out = self.layer_dict['small_senet_b%d_l%d' % (block_num, layer_num)].forward(out)
+            num_filters *= 2
+
+        self.layer_dict['final_bn'].forward(out)
+        out = F.relu(out)
+
+        print('shape after final small_senet block', out.shape)
+
+        out = self.layer_dict['final_global_dimred'].forward(out)
+
+        print('shape before final linear layer', out.shape)
+        out = out.view(out.shape[0], -1)
+
+        out = self.layer_dict['final_fc'].forward(out)
+        return out
 
     def reset_parameters(self):
         """
         Re-initialize the network parameters.
         """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass

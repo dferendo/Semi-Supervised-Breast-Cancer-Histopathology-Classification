@@ -54,16 +54,24 @@ class SqueezeExciteLayer(nn.Module):
 
         return out
 
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
 
 class SmallSeBlock(nn.Module):
-    def __init__(self, input_shape, dim_reduction_type, num_filters, use_bias=True,
+    def __init__(self, input_shape, num_filters, use_bias=True,
                  reduction=16, perform_downsampling=False, is_first_layer=False):
         super(SmallSeBlock, self).__init__()
 
         self.input_shape = input_shape
         self.num_filters = num_filters
         self.use_bias = use_bias
-        self.dim_reduction_type = dim_reduction_type
         self.reduction = reduction
         self.perform_downsampling = perform_downsampling
         self.is_first_layer = is_first_layer
@@ -73,7 +81,7 @@ class SmallSeBlock(nn.Module):
         self.build_module()
 
     def build_module(self):
-        print('Building Small_SE_Block with input shape %s reduction factor %d' % (self.input_shape, self.reduction))
+        print('Building Small_SE_Block with input shape %s' % (self.input_shape,))
 
         stride_red = 2 if self.perform_downsampling else 1
 
@@ -173,6 +181,16 @@ class SmallSeBlock(nn.Module):
             return True
         return False
 
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
+
 
 class InputConvolutionBlock(nn.Module):
     def __init__(self, input_shape, num_filters, use_bias=True):
@@ -209,3 +227,13 @@ class InputConvolutionBlock(nn.Module):
         out = self.layer_dict['bn_0'].forward(out)
         out = F.relu(out)
         return out
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
