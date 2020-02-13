@@ -31,9 +31,9 @@ transformations = transforms.Compose([
 # Data Loading
 train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'), transformations)
 
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
+validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
+test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 
 custom_conv_net = BHCNetwork(  # initialize our network object, in this case a ConvNet
     input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
@@ -41,7 +41,7 @@ custom_conv_net = BHCNetwork(  # initialize our network object, in this case a C
     use_bias=True,
     num_output_classes=2)
 
-ExperimentBuilder(network_model=BHCNetwork, use_gpu=args.use_gpu,
+conv_experiment = ExperimentBuilder(network_model=custom_conv_net, use_gpu=args.use_gpu,
                   experiment_name=args.experiment_name,
                   num_epochs=args.num_epochs,
                   weight_decay_coefficient=args.weight_decay_coefficient,
@@ -49,3 +49,4 @@ ExperimentBuilder(network_model=BHCNetwork, use_gpu=args.use_gpu,
                   train_data=train_loader, val_data=validation_loader,
                   test_data=test_loader)
 
+experiment_metrics, test_metrics = conv_experiment.run_experiment()

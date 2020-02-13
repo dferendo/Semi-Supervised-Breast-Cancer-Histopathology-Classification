@@ -275,18 +275,16 @@ class BHCNetwork(nn.Module):
 
         num_filters = out.shape[1]
         for block_num in range(3):
-            for layer_num in self.num_layers:
+            for layer_num in range(self.num_layers):
                 out = self.layer_dict['small_senet_b%d_l%d' % (block_num, layer_num)].forward(out)
             num_filters *= 2
 
         self.layer_dict['final_bn'].forward(out)
         out = F.relu(out)
 
-        print('shape after final small_senet block', out.shape)
 
         out = self.layer_dict['final_global_dimred'].forward(out)
 
-        print('shape before final linear layer', out.shape)
         out = out.view(out.shape[0], -1)
 
         out = self.layer_dict['final_fc'].forward(out)
