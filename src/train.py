@@ -28,6 +28,9 @@ transformations = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
 ])
 
+print('Optimiser:', args.optim_type)
+print('Scheduler:', args.sched_type)
+
 # Data Loading
 train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'),
                                                                        transformations)
