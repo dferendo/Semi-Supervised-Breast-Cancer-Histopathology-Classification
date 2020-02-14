@@ -17,7 +17,8 @@ from storage_utils import save_statistics
 
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
-                 test_data, weight_decay_coefficient, use_gpu, continue_from_epoch=-1, scheduler_choice=None):
+                 test_data, use_gpu, continue_from_epoch=-1,
+                 scheduler=None, optimiser=None, sched_params=None, optim_params=None):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -28,7 +29,6 @@ class ExperimentBuilder(nn.Module):
         :param train_data: An object of the DataProvider type. Contains the training set.
         :param val_data: An object of the DataProvider type. Contains the val set.
         :param test_data: An object of the DataProvider type. Contains the test set.
-        :param weight_decay_coefficient: A float indicating the weight decay to use with the adam optimizer.
         :param use_gpu: A boolean indicating whether to use a GPU or not.
         :param continue_from_epoch: An int indicating whether we'll start from scrach (-1) or whether we'll reload a previously saved model of epoch 'continue_from_epoch' and continue training from there.
         """
@@ -38,7 +38,6 @@ class ExperimentBuilder(nn.Module):
         self.model = network_model
         self.model.reset_parameters()
         self.device = torch.cuda.current_device()
-
 
         if torch.cuda.device_count() > 1 and use_gpu:
             self.device = torch.cuda.current_device()
@@ -59,14 +58,25 @@ class ExperimentBuilder(nn.Module):
         self.val_data = val_data
         self.test_data = test_data
 
-        if scheduler_choice is None:
+        if optimiser is None or optimiser == 'Adam':
             self.optimizer = Adam(self.parameters(), amsgrad=False,
-                                    weight_decay=weight_decay_coefficient)
+                                  weight_decay=optim_params['weight_decay'],
+                                  lr=sched_params['lr_max'])
+        elif optimiser == 'SGD':
+            self.optimizer = SGD(self.parameters(),
+                                 lr=sched_params['lr_max'],
+                                 momentum=optim_params['momentum'],
+                                 nesterov=optim_params['nesterov'],
+                                 weight_decay=optim_params['weight_decay'])
+
+        if scheduler == 'ERF':
+            self.scheduler = ERF(self.optimizer,
+                                 min_lr=sched_params['lr_min'],
+                                 alpha=sched_params['erf_alpha'],
+                                 beta=sched_params['erf_beta'],
+                                 epochs=num_epochs)
+        elif scheduler is None:
             self.scheduler = None
-        elif scheduler_choice == 'ERF':
-            self.optimizer = SGD(self.parameters(), lr=0.1,
-                            momentum=0.9, nesterov=True, weight_decay=weight_decay_coefficient)
-            self.scheduler = ERF(self.optimizer, min_lr=0.0001, alpha=-3, beta=3, epochs=num_epochs)
 
         print('System learnable parameters')
         num_conv_layers = 0

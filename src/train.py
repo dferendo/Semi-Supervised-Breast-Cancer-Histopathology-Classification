@@ -29,7 +29,8 @@ transformations = transforms.Compose([
 ])
 
 # Data Loading
-train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'), transformations)
+train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'),
+                                                                       transformations)
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
@@ -41,12 +42,25 @@ custom_conv_net = BHCNetwork(  # initialize our network object, in this case a C
     use_bias=True,
     num_output_classes=2)
 
-conv_experiment = ExperimentBuilder(network_model=custom_conv_net, use_gpu=args.use_gpu,
-                  experiment_name=args.experiment_name,
-                  num_epochs=args.num_epochs,
-                  weight_decay_coefficient=args.weight_decay_coefficient,
-                  continue_from_epoch=args.continue_from_epoch,
-                  train_data=train_loader, val_data=validation_loader,
-                  test_data=test_loader)
+optim_params = {'weight_decay': args.weight_decay_coefficient,
+                'momentum': args.momentum,
+                'nesterov': args.nesterov}
+sched_params = {'lr_max': args.learn_rate_max,
+                'lr_min': args.learn_rate_min,
+                'erf_alpha': args.erf_sched_alpha,
+                'erf_beta': args.erf_sched_beta}
+conv_experiment = ExperimentBuilder(network_model=custom_conv_net,
+                                    use_gpu=args.use_gpu,
+                                    experiment_name=args.experiment_name,
+                                    num_epochs=args.num_epochs,
+                                    continue_from_epoch=args.continue_from_epoch,
+                                    train_data=train_loader,
+                                    val_data=validation_loader,
+                                    test_data=test_loader,
+                                    optimiser=args.optim_type,
+                                    optim_params=optim_params,
+                                    scheduler=args.sched_type,
+                                    sched_params=sched_params)
 
 experiment_metrics, test_metrics = conv_experiment.run_experiment()
+
