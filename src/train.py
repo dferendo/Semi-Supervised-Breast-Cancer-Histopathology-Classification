@@ -11,8 +11,6 @@ from PIL import Image
 from experiment_builder import ExperimentBuilder
 from model_architectures import BHCNetwork
 
-print('Cuda devices', torch.cuda.device_count())
-
 args, device = get_args()  # get arguments from command line
 
 # Seeds
@@ -21,15 +19,17 @@ torch.manual_seed(seed=args.seed)
 
 # Transformations
 transformations = transforms.Compose([
+    transforms.RandomHorizontalFlip(0.5),
+    # transforms.Pad(),
     transforms.Resize((224, 224), interpolation=Image.BILINEAR),
-    transforms.RandomHorizontalFlip(1),
     transforms.ToTensor(),
     # TODO: Change this with zero mean
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
 ])
 
 # Data Loading
-train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'), transformations)
+train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'),
+                                                                       transformations, magnification='400X')
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)

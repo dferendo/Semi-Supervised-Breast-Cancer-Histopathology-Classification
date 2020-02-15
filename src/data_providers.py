@@ -37,6 +37,12 @@ class BreaKHisDataset(Dataset):
         return img, target
 
 
+def print_statistics(df, dataset):
+    print(f'{dataset} dataset statistics.')
+    print(df['Class Name'].value_counts())
+    print(df['Subclass Name'].value_counts())
+
+
 def get_all_images_location_with_classes(data_root):
     dataset = []
 
@@ -77,13 +83,23 @@ def get_all_images_location_with_classes(data_root):
     return dataset
 
 
-def split_dataset_into_sets(dataset, val_size, test_size):
+def split_dataset_into_sets(dataset, val_size, test_size, magnification=None):
     """
     Note: The patients are disjoints from the sets (Ie the same patient is not found in multiple sets)
     :param dataset:
+    :param val_size:
+    :param test_size:
+    :param magnification:
     :return:
     """
-    df = pd.DataFrame(dataset, columns=['Patient Name', 'Class Name', 'Subclass Name', 'Magnification', 'Image Location'])
+    columns = ['Patient Name', 'Class Name', 'Subclass Name', 'Magnification', 'Image Location']
+
+    df = pd.DataFrame(dataset, columns=columns)
+
+    if magnification is not None:
+        assert magnification == '40X' or magnification == '100X' or magnification == '200X' or magnification == '400X'
+        df = df[df['Magnification'] == magnification]
+
     total_number_of_images = len(df)
     df_grouped_by_patients = df.groupby(['Patient Name'])
 
@@ -97,9 +113,9 @@ def split_dataset_into_sets(dataset, val_size, test_size):
 
     current_amount_of_images = 0
 
-    df_train = pd.DataFrame(columns=['Patient Name', 'Class Name', 'Subclass Name', 'Magnification', 'Image Location'])
-    df_val = pd.DataFrame(columns=['Patient Name', 'Class Name', 'Subclass Name', 'Magnification', 'Image Location'])
-    df_test = pd.DataFrame(columns=['Patient Name', 'Class Name', 'Subclass Name', 'Magnification', 'Image Location'])
+    df_train = pd.DataFrame(columns=columns)
+    df_val = pd.DataFrame(columns=columns)
+    df_test = pd.DataFrame(columns=columns)
 
     for group_key in all_groups_names:
         selected_group = df_grouped_by_patients.get_group(group_key)
@@ -113,11 +129,16 @@ def split_dataset_into_sets(dataset, val_size, test_size):
 
         current_amount_of_images += len(selected_group)
 
+    print(f'Total number of images considered: {total_number_of_images}')
+    print_statistics(df_train, 'Train')
+    print_statistics(df_val, 'Validation')
+    print_statistics(df_train, 'Test')
+
     return df_train, df_val, df_test
 
 
-def get_datasets(data_root, transforms, val_size=0.15, test_size=0.15):
+def get_datasets(data_root, transforms, val_size=0.15, test_size=0.15, magnification=None):
     dataset = get_all_images_location_with_classes(data_root)
-    df_train, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size)
+    df_train, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size, magnification)
 
     return BreaKHisDataset(df_train, transforms), BreaKHisDataset(df_val, transforms), BreaKHisDataset(df_test, transforms)

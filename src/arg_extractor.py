@@ -53,6 +53,8 @@ def get_args():
                         help='Weight decay to use for Adam')
     parser.add_argument('--filepath_to_arguments_json_file', nargs="?", type=str, default=None,
                         help='')
+    parser.add_argument('--magnification', nargs="?", type=str, default=None,
+                        help='The type of magnification to consider (40X, 100X, 200X, 400X)')
 
     args = parser.parse_args()
 
