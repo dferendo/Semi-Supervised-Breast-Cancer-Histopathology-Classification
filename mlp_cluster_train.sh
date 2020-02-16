@@ -37,11 +37,10 @@ rsync -ua /home/${STUDENT_ID}/Leveraging-Unlabeled-Data-For-Breast-Cancer-Classi
 tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz"
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
-cd ..
 
-#python ./src/train.py --batch_size 20 --continue_from_epoch -1 --seed 0 \
-#                        --image_num_channels 3 --image_height 224 --image_width 224 \
-#                        --num_layers 3 --num_filters 16 \
-#                        --num_epochs 100 --experiment_name 'emnist_test_multi_gpu_exp' \
-#                        --use_gpu "True" --gpu_id "0" --weight_decay_coefficient 0. \
-#                        --dataset_location "${DATASET_DIR}"
+python ./src/train.py --batch_size 20 --continue_from_epoch -1 --seed 0 \
+                        --image_num_channels 3 --image_height 224 --image_width 224 \
+                        --num_layers 3 --num_filters 16 \
+                        --num_epochs 100 --experiment_name 'emnist_test_multi_gpu_exp' \
+                        --use_gpu "True" --gpu_id "0" --weight_decay_coefficient 0. \
+                        --dataset_location "${DATASET_DIR}"
