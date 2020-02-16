@@ -55,6 +55,8 @@ def get_args():
                         help='')
     parser.add_argument('--magnification', nargs="?", type=str, default=None,
                         help='The type of magnification to consider (40X, 100X, 200X, 400X)')
+    parser.add_argument('--dataset_location', nargs="?", type=str, default=None,
+                        help='The location of the dataset')
 
     args = parser.parse_args()
 
