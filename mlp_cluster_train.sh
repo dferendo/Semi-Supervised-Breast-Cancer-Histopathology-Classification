@@ -38,7 +38,7 @@ tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz"
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
-python ./src/train.py --batch_size 20 --continue_from_epoch -1 --seed 0 \
+python ./src/train.py --batch_size 100 --continue_from_epoch -1 --seed 0 \
                         --image_num_channels 3 --image_height 224 --image_width 224 \
                         --num_layers 3 --num_filters 16 \
                         --num_epochs 100 --experiment_name 'emnist_test_multi_gpu_exp' \

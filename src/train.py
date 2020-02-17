@@ -31,9 +31,9 @@ transformations = transforms.Compose([
 train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'),
                                                                        transformations)
 
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
-validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
-test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=6, drop_last=True)
+validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=6, drop_last=True)
+test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=6, drop_last=True)
 
 custom_conv_net = BHCNetwork(  # initialize our network object, in this case a ConvNet
     input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
