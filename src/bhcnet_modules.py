@@ -45,9 +45,9 @@ class SqueezeExciteLayer(nn.Module):
     def forward(self, x):
         w = self.layer_dict['se_global_avg_pool'] \
             .forward(x) \
-            .view(self.input_shape[0], self.input_shape[1])
+            .view(x.shape[0], x.shape[1])
         w = self.layer_dict['se_fc'].forward(w) \
-            .view(self.input_shape[0], self.input_shape[1], 1, 1) \
+            .view(x.shape[0], x.shape[1], 1, 1) \
             .expand_as(x)
 
         out = torch.mul(x, w)
