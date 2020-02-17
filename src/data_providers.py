@@ -132,7 +132,7 @@ def split_dataset_into_sets(dataset, val_size, test_size, magnification=None):
     print(f'Total number of images considered: {total_number_of_images}')
     print_statistics(df_train, 'Train')
     print_statistics(df_val, 'Validation')
-    print_statistics(df_train, 'Test')
+    print_statistics(df_test, 'Test')
 
     return df_train, df_val, df_test
 
@@ -142,3 +142,59 @@ def get_datasets(data_root, transforms, val_size=0.15, test_size=0.15, magnifica
     df_train, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size, magnification)
 
     return BreaKHisDataset(df_train, transforms), BreaKHisDataset(df_val, transforms), BreaKHisDataset(df_test, transforms)
+
+
+def calculate_mean_and_variance_for_a_set(loader):
+    mean = 0.
+    std = 0.
+    nb_samples = 0.
+
+    for data in loader:
+        data = data[0]
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
+
+    return mean, std, nb_samples
+
+
+# def calculate_the_mean_and_variance_of_the_dataset(train_loader, validation_loader, test_loader):
+#     mean = 0.
+#     std = 0.
+#     nb_samples = 0.
+#
+#     mean, std, nb_samples += calculate_mean_and_variance_for_a_set(train_loader)
+#     mean, std, nb_samples += calculate_mean_and_variance_for_a_set(validation_loader)
+#     mean, std, nb_samples = calculate_mean_and_variance_for_a_set(test_loader)
+
+    # for data in train_loader:
+    #     data = data[0]
+    #     batch_samples = data.size(0)
+    #     data = data.view(batch_samples, data.size(1), -1)
+    #     mean += data.mean(2).sum(0)
+    #     std += data.std(2).sum(0)
+    #     nb_samples += batch_samples
+    #
+    # for data in validation_loader:
+    #     data = data[0]
+    #     batch_samples = data.size(0)
+    #     data = data.view(batch_samples, data.size(1), -1)
+    #     mean += data.mean(2).sum(0)
+    #     std += data.std(2).sum(0)
+    #     nb_samples += batch_samples
+    #
+    # for data in test_loader:
+    #     data = data[0]
+    #     batch_samples = data.size(0)
+    #     data = data.view(batch_samples, data.size(1), -1)
+    #     mean += data.mean(2).sum(0)
+    #     std += data.std(2).sum(0)
+    #     nb_samples += batch_samples
+    #
+    # mean /= nb_samples
+    # std /= nb_samples
+    #
+    # print(mean)
+    # print(std)
