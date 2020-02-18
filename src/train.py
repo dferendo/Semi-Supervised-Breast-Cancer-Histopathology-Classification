@@ -11,29 +11,43 @@ from PIL import Image
 from experiment_builder import ExperimentBuilder
 from model_architectures import BHCNetwork
 
-print('Cuda devices', torch.cuda.device_count())
-
 args, device = get_args()  # get arguments from command line
 
 # Seeds
 rng = np.random.RandomState(seed=args.seed)
 torch.manual_seed(seed=args.seed)
 
+# Set the mean and variance for normalization
+if args.magnification == '40X':
+    normalization_mean = (0.8035, 0.6524, 0.7726)
+    normalization_var = (0.0782, 0.1073, 0.0765)
+elif args.magnification == '100X':
+    normalization_mean = (0.7956, 0.6360, 0.7709)
+    normalization_var = (0.0973, 0.1314, 0.0853)
+elif args.magnification == '200X':
+    normalization_mean = (0.7886, 0.6228, 0.7681)
+    normalization_var = (0.0996, 0.1317, 0.0782)
+elif args.magnification == '400X':
+    normalization_mean = (0.7565, 0.5902, 0.7428)
+    normalization_var = (0.1163, 0.1556, 0.0857)
+else:
+    normalization_mean = (0.7868, 0.6263, 0.7642)
+    normalization_var = (0.0974, 0.1310, 0.0814)
+
 # Transformations
 transformations = transforms.Compose([
+    transforms.RandomHorizontalFlip(0.5),
     transforms.Resize((224, 224), interpolation=Image.BILINEAR),
-    transforms.RandomHorizontalFlip(1),
     transforms.ToTensor(),
-    # TODO: Change this with zero mean
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    transforms.Normalize(normalization_mean, normalization_var)
 ])
 
 print('Optimiser:', args.optim_type)
 print('Scheduler:', args.sched_type)
 
 # Data Loading
-train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath('./data/BreaKHis_v1'),
-                                                                       transformations)
+train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath(args.dataset_location),
+                                                                       transformations, magnification=args.magnification)
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
@@ -66,4 +80,3 @@ conv_experiment = ExperimentBuilder(network_model=custom_conv_net,
                                     sched_params=sched_params)
 
 experiment_metrics, test_metrics = conv_experiment.run_experiment()
-

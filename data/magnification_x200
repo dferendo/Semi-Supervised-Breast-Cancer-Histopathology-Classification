@@ -1,0 +1,39 @@
+Train dataset statistics.
+malignant    991
+benign       407
+Name: Class Name, dtype: int64
+ductal_carcinoma       653
+fibroadenoma           195
+mucinous_carcinoma     134
+lobular_carcinoma      117
+tubular_adenoma         96
+papillary_carcinoma     87
+adenosis                64
+phyllodes_tumor         52
+Name: Subclass Name, dtype: int64
+Validation dataset statistics.
+malignant    170
+benign        91
+Name: Class Name, dtype: int64
+ductal_carcinoma       93
+fibroadenoma           33
+mucinous_carcinoma     30
+papillary_carcinoma    29
+tubular_adenoma        28
+lobular_carcinoma      18
+adenosis               16
+phyllodes_tumor        14
+Name: Subclass Name, dtype: int64
+Test dataset statistics.
+malignant    229
+benign       125
+Name: Class Name, dtype: int64
+ductal_carcinoma       150
+phyllodes_tumor         42
+fibroadenoma            36
+mucinous_carcinoma      32
+adenosis                31
+lobular_carcinoma       28
+papillary_carcinoma     19
+tubular_adenoma         16
+Name: Subclass Name, dtype: int64

@@ -69,6 +69,10 @@ def get_args():
                         help='ERF alpha hyperparam')
     parser.add_argument('--erf_sched_beta', nargs="?", type=int, default=None,
                         help='ERF beta hyperparam')
+    parser.add_argument('--magnification', nargs="?", type=str, default=None,
+                        help='The type of magnification to consider (40X, 100X, 200X, 400X)')
+    parser.add_argument('--dataset_location', nargs="?", type=str, default=None,
+                        help='The location of the dataset')
 
     args = parser.parse_args()
 

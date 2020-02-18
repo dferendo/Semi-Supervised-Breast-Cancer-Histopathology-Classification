@@ -1,0 +1,39 @@
+Total number of images considered: 7909
+Train dataset statistics.
+malignant    3826
+benign       1624
+Name: Class Name, dtype: int64
+ductal_carcinoma       2469
+fibroadenoma            740
+mucinous_carcinoma      549
+lobular_carcinoma       449
+tubular_adenoma         387
+papillary_carcinoma     359
+adenosis                262
+phyllodes_tumor         235
+Name: Subclass Name, dtype: int64
+Validation dataset statistics.
+malignant    711
+benign       363
+Name: Class Name, dtype: int64
+ductal_carcinoma       393
+papillary_carcinoma    127
+fibroadenoma           125
+tubular_adenoma        117
+mucinous_carcinoma     117
+lobular_carcinoma       74
+adenosis                61
+phyllodes_tumor         60
+Name: Subclass Name, dtype: int64
+Test dataset statistics.
+malignant    892
+benign       493
+Name: Class Name, dtype: int64
+ductal_carcinoma       589
+phyllodes_tumor        158
+fibroadenoma           149
+mucinous_carcinoma     126
+adenosis               121
+lobular_carcinoma      103
+papillary_carcinoma     74
+tubular_adenoma         65
