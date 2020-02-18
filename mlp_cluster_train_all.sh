@@ -34,7 +34,7 @@ export DATASET_DIR=${TMP}/datasets
 
 # Activate the relevant virtual environment:
 rsync -ua /home/${STUDENT_ID}/Leveraging-Unlabeled-Data-For-Breast-Cancer-Classification/data/BreaKHis_v1.tar.gz "${DATASET_DIR}"
-tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz"
+tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz" "${DATASET_DIR}"
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
@@ -46,4 +46,4 @@ python ./src/train.py --batch_size 20 --continue_from_epoch -1 --seed 0 \
                                                       --optim_type "SGD" --momentum 0.9 --nesterov "True" \
                                                       --sched_type "ERF" --learn_rate_max 0.01 --learn_rate_min 0.0001 \
                                                       --erf_sched_alpha -3 --erf_sched_beta 3 \
-                                                       --dataset_location "${DATASET_DIR}"
+                                                       --dataset_location "${DATASET_DIR}/BreaKHis_v1"
