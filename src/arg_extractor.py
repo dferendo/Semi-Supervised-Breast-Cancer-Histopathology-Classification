@@ -53,6 +53,22 @@ def get_args():
                         help='Weight decay to use for Adam')
     parser.add_argument('--filepath_to_arguments_json_file', nargs="?", type=str, default=None,
                         help='')
+    parser.add_argument('--learn_rate_max', nargs="?", type=float, default=0.0001,
+                        help='Starting learning rate. Max learning rate in a lr scheduler')
+    parser.add_argument('--learn_rate_min', nargs="?", type=float, default=0.00001,
+                        help='Min learning rate in a lr scheduler')
+    parser.add_argument('--optim_type', nargs="?", type=str, default='Adam',
+                        help='Which optimiser to use (Adam, SGD)')
+    parser.add_argument('--momentum', nargs="?", type=float, default=0.9,
+                        help='Which optimiser to use (Adam, SGD)')
+    parser.add_argument('--nesterov', nargs="?", type=str2bool, default=True,
+                        help='Whether to use Nesterov Momentum')
+    parser.add_argument('--sched_type', nargs="?", type=str, default=None,
+                        help='Which learn rate scheduler to use (ERF)')
+    parser.add_argument('--erf_sched_alpha', nargs="?", type=int, default=None,
+                        help='ERF alpha hyperparam')
+    parser.add_argument('--erf_sched_beta', nargs="?", type=int, default=None,
+                        help='ERF beta hyperparam')
     parser.add_argument('--magnification', nargs="?", type=str, default=None,
                         help='The type of magnification to consider (40X, 100X, 200X, 400X)')
     parser.add_argument('--dataset_location', nargs="?", type=str, default=None,

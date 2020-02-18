@@ -130,6 +130,5 @@ dmypy.json
 
 # JetBrains removal
 .idea/
-
 # Do not upload models weights
 **/saved_models/
