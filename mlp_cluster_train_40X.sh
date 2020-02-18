@@ -46,4 +46,4 @@ python ./src/train.py --batch_size 20 --continue_from_epoch -1 --seed 0 \
                                                       --optim_type "SGD" --momentum 0.9 --nesterov "True" \
                                                       --sched_type "ERF" --learn_rate_max 0.01 --learn_rate_min 0.0001 \
                                                       --erf_sched_alpha -4 --erf_sched_beta 4 \
-                                                      --dataset_location "${DATASET_DIR}" --magnification "40X"
+                                                      --dataset_location "${DATASET_DIR}/BreaKHis_v1" --magnification "40X"
