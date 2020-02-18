@@ -37,7 +37,6 @@ else:
 # Transformations
 transformations = transforms.Compose([
     transforms.RandomHorizontalFlip(0.5),
-    # transforms.Pad(),
     transforms.Resize((224, 224), interpolation=Image.BILINEAR),
     transforms.ToTensor(),
     transforms.Normalize(normalization_mean, normalization_var)
