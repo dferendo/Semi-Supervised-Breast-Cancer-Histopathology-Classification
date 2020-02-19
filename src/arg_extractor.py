@@ -73,6 +73,8 @@ def get_args():
                         help='The type of magnification to consider (40X, 100X, 200X, 400X)')
     parser.add_argument('--dataset_location', nargs="?", type=str, default=None,
                         help='The location of the dataset')
+    parser.add_argument('--unlabelled_split', nargs="?", type=float, default=None,
+                        help='The amount of the training set to be set as unlabelled (0 to 1)')
 
     args = parser.parse_args()
 

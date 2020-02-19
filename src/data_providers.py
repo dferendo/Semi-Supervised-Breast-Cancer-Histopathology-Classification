@@ -37,6 +37,28 @@ class BreaKHisDataset(Dataset):
         return img, target
 
 
+class BreaKHisDatasetUnlabelled(Dataset):
+    """
+    Reading the BreaKHis Dataset. Please keep the original dataset structure
+    """
+    def __init__(self, df, transform=None):
+        self.transform = transform
+        self.df = df
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        image_location = self.df.iloc[idx]['Image Location']
+
+        img = Image.open(image_location)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img
+
+
 def print_statistics(df, dataset):
     print(f'{dataset} dataset statistics.')
     print(df['Class Name'].value_counts())
@@ -85,9 +107,10 @@ def get_all_images_location_with_classes(data_root):
     return dataset_temp
 
 
-def split_dataset_into_sets(dataset, val_size, test_size, magnification=None):
+def split_dataset_into_sets(dataset, val_size, test_size, magnification=None, unlabeled_split=None):
     """
     Note: The patients are disjoints from the sets (Ie the same patient is not found in multiple sets)
+    :param unlabeled_split:
     :param dataset:
     :param val_size:
     :param test_size:
@@ -127,19 +150,38 @@ def split_dataset_into_sets(dataset, val_size, test_size, magnification=None):
 
             current_patients_amount += 1
 
+    df_train_labeled = pd.DataFrame(columns=columns)
+    df_train_unlabeled = pd.DataFrame(columns=columns)
+
+    if unlabeled_split is not None:
+        assert 0 < unlabeled_split < 1
+
+        # Group by subclasses and into two dataframes, one with labeled, one without.
+        df_trained_grouped_by_subclass = df_train.groupby(['Subclass Name'])
+
+        for group_name, df_group in df_trained_grouped_by_subclass:
+            split_group = np.array_split(df_group, [int(unlabeled_split * len(df_group))])
+
+            df_train_unlabeled = df_train_unlabeled.append(split_group[0])
+            df_train_labeled = df_train_labeled.append(split_group[1])
+    else:
+        df_train_labeled = df_train
+
     print(f'Total number of images considered: {len(df)}')
     print_statistics(df_train, 'Train')
     print_statistics(df_val, 'Validation')
     print_statistics(df_test, 'Test')
 
-    return df_train, df_val, df_test
+    return df_train_labeled, df_train_unlabeled, df_val, df_test
 
 
-def get_datasets(data_root, transforms, val_size=0.2, test_size=0.2, magnification=None):
+def get_datasets(data_root, transforms, val_size=0.2, test_size=0.2, magnification=None, unlabeled_split=None):
     dataset = get_all_images_location_with_classes(data_root)
-    df_train, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size, magnification)
+    df_train_labeled, df_train_unlabeled, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size,
+                                                                                    magnification, unlabeled_split)
 
-    return BreaKHisDataset(df_train, transforms), BreaKHisDataset(df_val, transforms), BreaKHisDataset(df_test, transforms)
+    return BreaKHisDataset(df_train_labeled, transforms), BreaKHisDatasetUnlabelled(df_train_unlabeled, transforms), \
+        BreaKHisDataset(df_val, transforms), BreaKHisDataset(df_test, transforms)
 
 
 def calculate_the_mean_and_variance_of_the_dataset(train_loader, validation_loader, test_loader):

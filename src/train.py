@@ -46,8 +46,13 @@ print('Optimiser:', args.optim_type)
 print('Scheduler:', args.sched_type)
 
 # Data Loading
-train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath(args.dataset_location),
-                                                                       transformations, magnification=args.magnification)
+train_dataset, unlabelled_train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath(args.dataset_location),
+                                                                                                 transformations,
+                                                                                                 magnification=args.magnification,
+                                                                                                 unlabeled_split=args.unlabelled_split)
+
+print(len(train_dataset.df))
+print(len(unlabelled_train_dataset.df))
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
