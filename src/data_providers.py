@@ -50,13 +50,14 @@ class BreaKHisDatasetUnlabelled(Dataset):
 
     def __getitem__(self, idx):
         image_location = self.df.iloc[idx]['Image Location']
-
         img = Image.open(image_location)
 
-        if self.transform is not None:
-            img = self.transform(img)
+        all_transformations = []
 
-        return img
+        for transformation in self.transform:
+            all_transformations.append(transformation(img))
+
+        return all_transformations
 
 
 def print_statistics(df, dataset):
@@ -175,12 +176,12 @@ def split_dataset_into_sets(dataset, val_size, test_size, magnification=None, un
     return df_train_labeled, df_train_unlabeled, df_val, df_test
 
 
-def get_datasets(data_root, transforms, val_size=0.2, test_size=0.2, magnification=None, unlabeled_split=None):
+def get_datasets(data_root, transforms, val_size=0.2, test_size=0.2, magnification=None, unlabeled_split=None, unlabeled_transformations=None):
     dataset = get_all_images_location_with_classes(data_root)
     df_train_labeled, df_train_unlabeled, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size,
                                                                                     magnification, unlabeled_split)
 
-    return BreaKHisDataset(df_train_labeled, transforms), BreaKHisDatasetUnlabelled(df_train_unlabeled, transforms), \
+    return BreaKHisDataset(df_train_labeled, transforms), BreaKHisDatasetUnlabelled(df_train_unlabeled, unlabeled_transformations), \
         BreaKHisDataset(df_val, transforms), BreaKHisDataset(df_test, transforms)
 
 

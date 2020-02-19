@@ -9,6 +9,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from PIL import Image
 from experiment_builder import ExperimentBuilder
+from ExperimentBuilderMixMatch import ExperimentBuilderMixMatch
 from model_architectures import BHCNetwork
 
 args, device = get_args()  # get arguments from command line
@@ -42,6 +43,22 @@ transformations = transforms.Compose([
     transforms.Normalize(normalization_mean, normalization_var)
 ])
 
+transformations_1 = transforms.Compose([
+    transforms.RandomHorizontalFlip(0.5),
+    transforms.Resize((224, 224), interpolation=Image.BILINEAR),
+    transforms.ToTensor(),
+    transforms.Normalize(normalization_mean, normalization_var)
+])
+
+transformations_2 = transforms.Compose([
+    transforms.RandomCrop(0.1),
+    transforms.Resize((224, 224), interpolation=Image.BILINEAR),
+    transforms.ToTensor(),
+    transforms.Normalize(normalization_mean, normalization_var)
+])
+
+unlabeled_transformation = [transformations_1, transformations_2]
+
 print('Optimiser:', args.optim_type)
 print('Scheduler:', args.sched_type)
 
@@ -49,12 +66,11 @@ print('Scheduler:', args.sched_type)
 train_dataset, unlabelled_train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath(args.dataset_location),
                                                                                                  transformations,
                                                                                                  magnification=args.magnification,
-                                                                                                 unlabeled_split=args.unlabelled_split)
-
-print(len(train_dataset.df))
-print(len(unlabelled_train_dataset.df))
+                                                                                                 unlabeled_split=args.unlabelled_split,
+                                                                                                 unlabeled_transformations=unlabeled_transformation)
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
+train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 validation_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, drop_last=True)
 
@@ -72,7 +88,7 @@ sched_params = {'lr_max': args.learn_rate_max,
                 'erf_alpha': args.erf_sched_alpha,
                 'erf_beta': args.erf_sched_beta}
 
-conv_experiment = ExperimentBuilder(network_model=custom_conv_net,
+conv_experiment = ExperimentBuilderMixMatch(network_model=custom_conv_net,
                                     use_gpu=args.use_gpu,
                                     experiment_name=args.experiment_name,
                                     num_epochs=args.num_epochs,
@@ -83,6 +99,8 @@ conv_experiment = ExperimentBuilder(network_model=custom_conv_net,
                                     optimiser=args.optim_type,
                                     optim_params=optim_params,
                                     scheduler=args.sched_type,
-                                    sched_params=sched_params)
+                                    sched_params=sched_params,
+                                    train_data_unlabeled=train_unlabeled_loader,
+                                    lambda_u=0.5)
 
 experiment_metrics, test_metrics = conv_experiment.run_experiment()
