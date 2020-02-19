@@ -66,6 +66,7 @@ sched_params = {'lr_max': args.learn_rate_max,
                 'lr_min': args.learn_rate_min,
                 'erf_alpha': args.erf_sched_alpha,
                 'erf_beta': args.erf_sched_beta}
+
 conv_experiment = ExperimentBuilder(network_model=custom_conv_net,
                                     use_gpu=args.use_gpu,
                                     experiment_name=args.experiment_name,
