@@ -24,7 +24,7 @@ class SemiLoss(object):
         probs_u = torch.softmax(outputs_u, dim=1)
 
         Lx = -torch.mean(torch.sum(F.log_softmax(outputs_x, dim=1) * targets_x, dim=1))
-        Lu = torch.mean((probs_u - targets_u)**2)
+        Lu = torch.mean((probs_u - targets_u) ** 2)
 
         return Lx, Lu, self.lambda_u
 
@@ -74,6 +74,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         self.test_data = test_data
         self.sharpen_temp = sharpen_temp
         self.mixup_alpha = mixup_alpha
+        self.loss_lambda_u = lambda_u
 
         if optimiser is None or optimiser == 'Adam':
             self.optimizer = Adam(self.parameters(), amsgrad=False,
@@ -132,8 +133,9 @@ class ExperimentBuilderMixMatch(nn.Module):
         self.num_epochs = num_epochs
 
         # TODO: self.criterion never actually used, should we fix that?
-        self.unlabeled_train_criterion = SemiLoss(lambda_u)
-        self.criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
+        # self.unlabeled_train_criterion = SemiLoss(self.unlabeled_train_criterion)
+        self.unlabeled_train_criterion = nn.MSELoss().to(self.device, non_blocking=True)
+        self.criterion = nn.CrossEntropyLoss().to(self.device, non_blocking=True)  # send the loss computation to the GPU
 
         if continue_from_epoch == -2:
             try:
@@ -221,37 +223,39 @@ class ExperimentBuilderMixMatch(nn.Module):
         """
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
 
+        # TODO: What is this doing?
         if len(y.shape) > 1:
             y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
 
         if type(x) is np.ndarray:
             x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
-            device=self.device)  # send data to device as torch tensors
+                device=self.device)  # send data to device as torch tensors
 
-        x = x.to(self.device)
-        y = y.to(self.device)
+        # Apply Mixmatch
+        # x and y have same shapes as before
+        # u and q have shape batch*k x dims
+        x, y, u, q = self.mixmatch(x, y, u)
 
-        out = self.model.forward(x)  # forward the data in the model
+        x = x.to(self.device, non_blocking=True)
+        y = y.to(self.device, non_blocking=True)
+        u = u.to(self.device, non_blocking=True)
+        q = q.to(self.device, non_blocking=True)
 
-        # Forward Propagate u_i for all augmentations k
-        f_prop_u = []
-        q_bar = torch.zeros((u.shape[0], y.shape[1])).to(self.device)
-        for augmentation in u:
-            q_k = torch.softmax(self.model.forward(augmentation), dim=1)
-            q_bar += q_k
-            f_prop_u.append(q_k)
-        q_bar = q_bar/len(u)
-        q = self.sharpen(q_bar, self.sharpen_temp)
+        # TODO: Interleave to avoid batchnorm issues? (??)
+        # forward props
+        out_x = self.model.forward(x)
+        out_u = self.model.forward(u)
 
-
-
-        loss = F.cross_entropy(input=out, target=y)  # compute loss
+        # TODO: update lambda_U per epoch
+        Lx = self.criterion(input=out_x, target=y)  # compute labelled loss
+        Lu = self.unlabeled_train_criterion(input=torch.softmax(out_u, dim=1), target=q)
+        loss = Lx + (Lu*self.loss_lambda_u)
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
 
         self.optimizer.step()  # update network parameters
-        _, predicted = torch.max(out.data, 1)  # get argmax of predictions
+        _, predicted = torch.max(out_x.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
         return loss.data.detach().cpu().numpy(), accuracy
 
@@ -267,7 +271,7 @@ class ExperimentBuilderMixMatch(nn.Module):
             y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
         if type(x) is np.ndarray:
             x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
-            device=self.device)  # convert data to pytorch tensors and send to the computation device
+                device=self.device)  # convert data to pytorch tensors and send to the computation device
 
         x = x.to(self.device)
         y = y.to(self.device)
@@ -333,7 +337,6 @@ class ExperimentBuilderMixMatch(nn.Module):
                     "loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))  # update progress bar string output
         return current_epoch_losses
 
-
     def load_model(self, model_save_dir, model_save_name, model_idx):
         """
         Load the network parameter state and the best val model idx and best val acc to be compared with the future val accuracies, in order to choose the best val model
@@ -376,7 +379,8 @@ class ExperimentBuilderMixMatch(nn.Module):
             total_losses['curr_epoch'].append(epoch_idx)
             save_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv',
                             stats_dict=total_losses, current_epoch=i,
-                            continue_from_mode=True if (self.starting_epoch != 0 or i > 0) else False) # save statistics to stats file.
+                            continue_from_mode=True if (
+                                        self.starting_epoch != 0 or i > 0) else False)  # save statistics to stats file.
 
             # load_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv') # How to load a csv file if you need to
 
