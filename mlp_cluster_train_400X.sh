@@ -4,7 +4,7 @@
 #SBATCH --partition=Teach-Standard
 #SBATCH --gres=gpu:2
 #SBATCH --mem=12000  # memory in Mb
-#SBATCH --time=0-08:00:00
+#SBATCH --time=0-04:00:00
 
 
 export CUDA_HOME=/opt/cuda-9.0.176.1/
@@ -41,7 +41,7 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 python ./src/train.py --batch_size 20 --continue_from_epoch -1 --seed 0 \
                                                       --image_num_channels 3 --image_height 224 --image_width 224 \
                                                       --num_layers 3 --num_filters 16 \
-                                                      --num_epochs 300 --experiment_name 'base_tune_test_epoch_300_400X' \
+                                                      --num_epochs 100 --experiment_name 'base_tune_test_2_400X' \
                                                       --use_gpu "True" --weight_decay_coefficient 0.0001 \
                                                       --optim_type "SGD" --momentum 0.9 --nesterov "True" \
                                                       --sched_type "ERF" --learn_rate_max 0.01 --learn_rate_min 0.0001 \
