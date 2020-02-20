@@ -1,4 +1,5 @@
 import sys
+from copy import deepcopy
 
 import torch
 import torch.nn as nn
@@ -16,6 +17,27 @@ from ERF_Scheduler import ERF
 from storage_utils import save_statistics
 
 
+class WeightEMA(object):
+    def __init__(self, model, ema_model, lr, alpha=0.999):
+        self.model = model
+        self.ema_model = ema_model
+        self.alpha = alpha
+        self.params = list(model.state_dict().values())
+        self.ema_params = list(ema_model.state_dict().values())
+        self.wd = 0.02 * lr
+
+        for param, ema_param in zip(self.params, self.ema_params):
+            param.data.copy_(ema_param.data)
+
+    def step(self):
+        one_minus_alpha = 1.0 - self.alpha
+        for param, ema_param in zip(self.params, self.ema_params):
+            ema_param.mul_(self.alpha)
+            ema_param.add_(param * one_minus_alpha)
+            # customized weight decay
+            param.mul_(1 - self.wd)
+
+
 class SemiLoss(object):
     def __init__(self, lambda_u):
         self.lambda_u = lambda_u
@@ -27,6 +49,23 @@ class SemiLoss(object):
         Lu = torch.mean((probs_u - targets_u) ** 2)
 
         return Lx, Lu, self.lambda_u
+
+
+def create_ema_model(model):
+    model_out = deepcopy(model)
+
+    for param in model_out.parameters():
+        param.detach_()
+
+    return model_out
+
+
+def linear_rampup(current, rampup_length):
+    if rampup_length == 0:
+        return 1.0
+    else:
+        current = np.clip(current / rampup_length, 0.0, 1.0)
+        return float(current)
 
 
 class ExperimentBuilderMixMatch(nn.Module):
@@ -86,6 +125,9 @@ class ExperimentBuilderMixMatch(nn.Module):
                                  momentum=optim_params['momentum'],
                                  nesterov=optim_params['nesterov'],
                                  weight_decay=optim_params['weight_decay'])
+
+        self.ema_model = create_ema_model(self.model).to(self.device)
+        self.ema_optimiser = WeightEMA(ema_model=self.ema_model, model=self.model, lr=sched_params['lr_max'])
 
         if scheduler == 'ERF':
             self.scheduler = ERF(self.optimizer,
@@ -214,7 +256,7 @@ class ExperimentBuilderMixMatch(nn.Module):
 
             return self.mixup(x, y, u_list, q)
 
-    def run_train_iter(self, x, u, y):
+    def run_train_iter(self, x, u, y, batch_num, batch_total, epoch_num):
         """
         Receives the inputs and targets for the model and runs a training iteration. Returns loss and accuracy metrics.
         :param x: The inputs to the model. A numpy array of shape batch_size, channels, height, width
@@ -246,15 +288,17 @@ class ExperimentBuilderMixMatch(nn.Module):
         out_x = self.model.forward(x)
         out_u = self.model.forward(u)
 
-        # TODO: update lambda_U per epoch
+        rampup = linear_rampup(current=epoch_num+(batch_num/batch_total), rampup_length=self.num_epochs)
         Lx = self.criterion(input=out_x, target=y)  # compute labelled loss
         Lu = self.unlabeled_train_criterion(input=torch.softmax(out_u, dim=1), target=q)
-        loss = Lx + (Lu*self.loss_lambda_u)
+        loss = Lx + (Lu*(self.loss_lambda_u*rampup))
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
 
         self.optimizer.step()  # update network parameters
+        self.ema_optimiser.step()
+
         _, predicted = torch.max(out_x.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
         return loss.data.detach().cpu().numpy(), accuracy
@@ -296,7 +340,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         torch.save(state, f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(
             model_idx))))  # save state at prespecified filepath
 
-    def run_training_epoch(self, current_epoch_losses):
+    def run_training_epoch(self, current_epoch_losses, current_epoch):
         with tqdm.tqdm(total=len(self.train_data), file=sys.stdout) as pbar_train:  # create a progress bar for training
             for idx, (x, y) in enumerate(self.train_data):  # get data batches
                 try:
@@ -304,7 +348,11 @@ class ExperimentBuilderMixMatch(nn.Module):
                 except:
                     break
 
-                loss, accuracy = self.run_train_iter(x=x, u=augmented_all, y=y)  # take a training iter step
+                # take a training iter step
+                loss, accuracy = self.run_train_iter(x=x, u=augmented_all, y=y,
+                                                     batch_num=idx,
+                                                     batch_total=len(self.train_data),
+                                                     epoch_num=current_epoch)
                 current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
                 current_epoch_losses["train_acc"].append(accuracy)  # add current iter acc to the train acc list
                 pbar_train.update(1)
@@ -360,7 +408,7 @@ class ExperimentBuilderMixMatch(nn.Module):
             epoch_start_time = time.time()
             current_epoch_losses = {"train_acc": [], "train_loss": [], "val_acc": [], "val_loss": []}
 
-            current_epoch_losses = self.run_training_epoch(current_epoch_losses)
+            current_epoch_losses = self.run_training_epoch(current_epoch_losses, current_epoch=epoch_idx)
             current_epoch_losses = self.run_validation_epoch(current_epoch_losses)
 
             if self.scheduler is not None:
