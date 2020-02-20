@@ -32,7 +32,7 @@ class SemiLoss(object):
 class ExperimentBuilderMixMatch(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, train_data_unlabeled, val_data,
                  test_data, use_gpu, continue_from_epoch=-1, scheduler=None, optimiser=None, sched_params=None,
-                 optim_params=None, lambda_u=None):
+                 optim_params=None, lambda_u=100, sharpen_temp=0.5, mixup_alpha=0.75):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -72,6 +72,8 @@ class ExperimentBuilderMixMatch(nn.Module):
         self.train_data_unlabeled = iter(train_data_unlabeled)
         self.val_data = val_data
         self.test_data = test_data
+        self.sharpen_temp = sharpen_temp
+        self.mixup_alpha = mixup_alpha
 
         if optimiser is None or optimiser == 'Adam':
             self.optimizer = Adam(self.parameters(), amsgrad=False,
@@ -129,6 +131,7 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         self.num_epochs = num_epochs
 
+        # TODO: self.criterion never actually used, should we fix that?
         self.unlabeled_train_criterion = SemiLoss(lambda_u)
         self.criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
 
@@ -161,6 +164,54 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         return total_num_params
 
+    def sharpen(self, p, T):
+        pt = p ** (1 / T)
+        targets_u = pt / pt.sum(dim=1, keepdim=True)
+        return targets_u
+
+    def mixup(self, x, y, u_list, q):
+        '''Returns mixed inputs, pairs of targets, and lambda'''
+        # mixup
+        all_inputs = u_list
+        all_inputs.append(x)
+        all_inputs = torch.cat(all_inputs, dim=0)
+
+        all_targets = [q for i in range(len(u_list))]
+        all_targets.append(y)
+        all_targets = torch.cat(all_targets, dim=0)
+
+        l = np.random.beta(self.mixup_alpha, self.mixup_alpha)
+        l = max(l, 1 - l)
+
+        idx = torch.randperm(all_inputs.size(0))
+
+        input_a, input_b = all_inputs, all_inputs[idx]
+        target_a, target_b = all_targets, all_targets[idx]
+
+        mixed_input = l * input_a + (1 - l) * input_b
+        mixed_target = l * target_a + (1 - l) * target_b
+
+        x_mix = mixed_input[-len(x):]
+        y_mix = mixed_target[-len(x):]
+
+        u_mix = mixed_input[:-len(x)]
+        q_mix = mixed_target[:-len(x)]
+
+        return x_mix, y_mix, u_mix, q_mix
+
+    def mixmatch(self, x, y, u_list):
+        with torch.no_grad():
+            # Forward Propagate u_i for all augmentations k
+            q_bar = torch.zeros((u_list[0].shape[0], y.shape[1])).to(self.device)
+            for augmentation in u_list:
+                q_k = torch.softmax(self.model.forward(augmentation), dim=1)
+                q_bar += q_k
+            q_bar = q_bar / len(u_list)
+            q = self.sharpen(q_bar, self.sharpen_temp)
+            q = q.detach()
+
+            return self.mixup(x, y, u_list, q)
+
     def run_train_iter(self, x, u, y):
         """
         Receives the inputs and targets for the model and runs a training iteration. Returns loss and accuracy metrics.
@@ -182,12 +233,19 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         out = self.model.forward(x)  # forward the data in the model
 
+        # Forward Propagate u_i for all augmentations k
         f_prop_u = []
-
+        q_bar = torch.zeros((u.shape[0], y.shape[1])).to(self.device)
         for augmentation in u:
-            f_prop_u.append(self.model.forward(augmentation))
+            q_k = torch.softmax(self.model.forward(augmentation), dim=1)
+            q_bar += q_k
+            f_prop_u.append(q_k)
+        q_bar = q_bar/len(u)
+        q = self.sharpen(q_bar, self.sharpen_temp)
 
-            loss = F.cross_entropy(input=out, target=y)  # compute loss
+
+
+        loss = F.cross_entropy(input=out, target=y)  # compute loss
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss

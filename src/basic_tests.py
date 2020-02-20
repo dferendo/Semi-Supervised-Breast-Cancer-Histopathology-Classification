@@ -18,9 +18,11 @@ def sharpen(p, T):
 
 
 p_s = (1,5)
-x = torch.rand(p_s)
-x = x / x.sum(dim=1, keepdim=True)
+x1 = torch.rand(p_s)
+x = x1 / x1.sum(dim=1, keepdim=True)
+print(x1)
 print(x)
+print(torch.softmax(x1, dim=1))
 print(sharpen(x, 0.1))
 print(sharpen(x, 2))
 print(sharpen(x, 10))
