@@ -68,6 +68,26 @@ def linear_rampup(current, rampup_length):
         return float(current)
 
 
+def interleave_offsets(batch, nu):
+    groups = [batch // (nu + 1)] * (nu + 1)
+    for x in range(batch - sum(groups)):
+        groups[-x - 1] += 1
+    offsets = [0]
+    for g in groups:
+        offsets.append(offsets[-1] + g)
+    assert offsets[-1] == batch
+    return offsets
+
+
+def interleave(xy, batch):
+    nu = len(xy) - 1
+    offsets = interleave_offsets(batch, nu)
+    xy = [[v[offsets[p]:offsets[p + 1]] for p in range(nu + 1)] for v in xy]
+    for i in range(1, nu + 1):
+        xy[0][i], xy[i][i] = xy[i][i], xy[0][i]
+    return [torch.cat(v, dim=0) for v in xy]
+
+
 class ExperimentBuilderMixMatch(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, train_data_unlabeled, val_data,
                  test_data, use_gpu, continue_from_epoch=-1, scheduler=None, optimiser=None, sched_params=None,
@@ -216,12 +236,12 @@ class ExperimentBuilderMixMatch(nn.Module):
     def mixup(self, x, y, u_list, q):
         '''Returns mixed inputs, pairs of targets, and lambda'''
         # mixup
-        all_inputs = u_list
-        all_inputs.append(x)
+        all_inputs = [x]
+        all_inputs.extend(u_list)
         all_inputs = torch.cat(all_inputs, dim=0)
 
-        all_targets = [q for i in range(len(u_list))]
-        all_targets.append(y)
+        all_targets = [y]
+        all_targets.extend([q for i in range(len(u_list))])
         all_targets = torch.cat(all_targets, dim=0)
 
         l = np.random.beta(self.mixup_alpha, self.mixup_alpha)
@@ -235,13 +255,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         mixed_input = l * input_a + (1 - l) * input_b
         mixed_target = l * target_a + (1 - l) * target_b
 
-        x_mix = mixed_input[-len(x):]
-        y_mix = mixed_target[-len(x):]
-
-        u_mix = mixed_input[:-len(x)]
-        q_mix = mixed_target[:-len(x)]
-
-        return x_mix, y_mix, u_mix, q_mix
+        return mixed_input, mixed_target
 
     def mixmatch(self, x, y, u_list):
         with torch.no_grad():
@@ -273,24 +287,35 @@ class ExperimentBuilderMixMatch(nn.Module):
             x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
                 device=self.device)  # send data to device as torch tensors
 
+        batch_size = x.shape[0]
+
         # Apply Mixmatch
         # x and y have same shapes as before
         # u and q have shape batch*k x dims
-        x, y, u, q = self.mixmatch(x, y, u)
+        mixed_input, mixed_target = self.mixmatch(x, y, u)
+        y = mixed_target[:batch_size]
+        q = mixed_target[batch_size:]
 
-        x = x.to(self.device, non_blocking=True)
-        y = y.to(self.device, non_blocking=True)
-        u = u.to(self.device, non_blocking=True)
-        q = q.to(self.device, non_blocking=True)
+        # Interleave is simply forming batches of items that come from both labeled and unlabeled batches.
+        # Since we only update batch norm for the first batch,
+        # it's important that this batch is representative of the whole data.
+        # From https://github.com/google-research/mixmatch/issues/5#issuecomment-506432086 and
+        # https://github.com/YU1ut/MixMatch-pytorch/blob/a738cc95aae88f76761aeeb405201bc7ae200e7d/train.py#L186
+        mixed_input = list(torch.split(mixed_input, batch_size))
+        mixed_input = interleave(mixed_input, batch_size)
 
-        # TODO: Interleave to avoid batchnorm issues? (??)
-        # forward props
-        out_x = self.model.forward(x)
-        out_u = self.model.forward(u)
+        logits = [self.model.forward(mixed_input[0])]
+        for input in mixed_input[1:]:
+            logits.append(self.model.forward(input))
+
+        # put interleaved samples back
+        logits = interleave(logits, batch_size)
+        logits_x = logits[0]
+        logits_u = torch.cat(logits[1:], dim=0)
 
         rampup = linear_rampup(current=epoch_num+(batch_num/batch_total), rampup_length=self.num_epochs)
-        Lx = self.criterion(input=out_x, target=y)  # compute labelled loss
-        Lu = self.unlabeled_train_criterion(input=torch.softmax(out_u, dim=1), target=q)
+        Lx = self.criterion(input=logits_x, target=y)  # compute labelled loss
+        Lu = self.unlabeled_train_criterion(input=torch.softmax(logits_u, dim=1), target=q)
         loss = Lx + (Lu*(self.loss_lambda_u*rampup))
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
