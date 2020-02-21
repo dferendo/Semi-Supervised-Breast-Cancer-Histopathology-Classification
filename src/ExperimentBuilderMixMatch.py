@@ -129,7 +129,8 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         # re-initialize network parameters
         self.train_data = train_data
-        self.train_data_unlabeled = iter(train_data_unlabeled)
+        self.train_data_unlabeled = train_data_unlabeled
+        self.temp = train_data_unlabeled
         self.val_data = val_data
         self.test_data = test_data
         self.sharpen_temp = sharpen_temp
@@ -353,7 +354,7 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         x = x.to(self.device)
         y = y.to(self.device)
-        out = self.model.forward(x)  # forward the data in the model
+        out = self.ema_model.forward(x)  # forward the data in the model
         loss = F.cross_entropy(out, y)  # compute loss
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
@@ -380,7 +381,8 @@ class ExperimentBuilderMixMatch(nn.Module):
                 try:
                     augmented_all = self.train_data_unlabeled.next()
                 except:
-                    break
+                    self.train_data_unlabeled = iter(self.temp)
+                    augmented_all = self.train_data_unlabeled.next()
 
                 # take a training iter step
                 loss, accuracy = self.run_train_iter(x=x, u=augmented_all, y=y,
