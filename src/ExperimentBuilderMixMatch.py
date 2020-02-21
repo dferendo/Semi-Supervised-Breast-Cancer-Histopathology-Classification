@@ -31,24 +31,21 @@ class WeightEMA(object):
 
     def step(self):
         one_minus_alpha = 1.0 - self.alpha
-        for param, ema_param in zip(self.params, self.ema_params):
-            ema_param.mul_(self.alpha)
-            ema_param.add_(param * one_minus_alpha)
+        for index, (param, ema_param) in enumerate(zip(self.params, self.ema_params)):
+            self.ema_params[index] = ema_param.mul(self.alpha)
+            self.ema_params[index].add_(param * one_minus_alpha)
             # customized weight decay
-            param.mul_(1 - self.wd)
+            self.params[index] = param.mul(1 - self.wd)
 
 
 class SemiLoss(object):
-    def __init__(self, lambda_u):
-        self.lambda_u = lambda_u
-
-    def __call__(self, outputs_x, targets_x, outputs_u, targets_u, epoch):
+    def __call__(self, outputs_x, targets_x, outputs_u, targets_u):
         probs_u = torch.softmax(outputs_u, dim=1)
 
         Lx = -torch.mean(torch.sum(F.log_softmax(outputs_x, dim=1) * targets_x, dim=1))
         Lu = torch.mean((probs_u - targets_u) ** 2)
 
-        return Lx, Lu, self.lambda_u
+        return Lx, Lu
 
 
 def create_ema_model(model):
@@ -109,17 +106,21 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         self.experiment_name = experiment_name
         self.model = network_model
+        self.ema_model = create_ema_model(self.model)
         self.model.reset_parameters()
         self.device = torch.cuda.current_device()
 
         if torch.cuda.device_count() > 1 and use_gpu:
             self.device = torch.cuda.current_device()
             self.model.to(self.device)
+            self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
             self.model = nn.DataParallel(module=self.model)
+            self.ema_model = nn.DataParallel(module=self.ema_model)
             print('Use Multi GPU', self.device)
         elif torch.cuda.device_count() == 1 and use_gpu:
             self.device = torch.cuda.current_device()
             self.model.to(self.device)  # sends the model from the cpu to the gpu
+            self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
             print('Use GPU', self.device)
         else:
             print("use CPU")
@@ -146,7 +147,6 @@ class ExperimentBuilderMixMatch(nn.Module):
                                  nesterov=optim_params['nesterov'],
                                  weight_decay=optim_params['weight_decay'])
 
-        self.ema_model = create_ema_model(self.model).to(self.device)
         self.ema_optimiser = WeightEMA(ema_model=self.ema_model, model=self.model, lr=sched_params['lr_max'])
 
         if scheduler == 'ERF':
@@ -194,10 +194,10 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         self.num_epochs = num_epochs
 
-        # TODO: self.criterion never actually used, should we fix that?
         # self.unlabeled_train_criterion = SemiLoss(self.unlabeled_train_criterion)
-        self.unlabeled_train_criterion = nn.MSELoss().to(self.device, non_blocking=True)
-        self.criterion = nn.CrossEntropyLoss().to(self.device, non_blocking=True)  # send the loss computation to the GPU
+        # self.unlabeled_train_criterion = nn.MSELoss().to(self.device, non_blocking=True)
+        # self.criterion = nn.CrossEntropyLoss().to(self.device, non_blocking=True)  # send the loss computation to the GPU
+        self.criterion = SemiLoss()
 
         if continue_from_epoch == -2:
             try:
@@ -244,6 +244,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         all_targets.extend([q for i in range(len(u_list))])
         all_targets = torch.cat(all_targets, dim=0)
 
+        # TODO: fix to draw a tensor of lambdas
         l = np.random.beta(self.mixup_alpha, self.mixup_alpha)
         l = max(l, 1 - l)
 
@@ -268,7 +269,11 @@ class ExperimentBuilderMixMatch(nn.Module):
             q = self.sharpen(q_bar, self.sharpen_temp)
             q = q.detach()
 
-            return self.mixup(x, y, u_list, q)
+            x = x.to(self.device, non_blocking=True)
+            y = y.to(self.device, non_blocking=True)
+            mixed_input, mixed_target = self.mixup(x, y, u_list, q)
+
+            return mixed_input, mixed_target
 
     def run_train_iter(self, x, u, y, batch_num, batch_total, epoch_num):
         """
@@ -279,9 +284,11 @@ class ExperimentBuilderMixMatch(nn.Module):
         """
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
 
-        # TODO: What is this doing?
-        if len(y.shape) > 1:
-            y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
+        # if len(y.shape) > 1:
+        #     y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
+
+        for i in range(len(u)):
+            u[i] = u[i].to(self.device, non_blocking=True)
 
         if type(x) is np.ndarray:
             x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
@@ -313,10 +320,9 @@ class ExperimentBuilderMixMatch(nn.Module):
         logits_x = logits[0]
         logits_u = torch.cat(logits[1:], dim=0)
 
-        rampup = linear_rampup(current=epoch_num+(batch_num/batch_total), rampup_length=self.num_epochs)
-        Lx = self.criterion(input=logits_x, target=y)  # compute labelled loss
-        Lu = self.unlabeled_train_criterion(input=torch.softmax(logits_u, dim=1), target=q)
-        loss = Lx + (Lu*(self.loss_lambda_u*rampup))
+        rampup = linear_rampup(current=epoch_num + (batch_num / batch_total), rampup_length=self.num_epochs)
+        Lx, Lu = self.criterion(logits_x, y, logits_u, q)
+        loss = Lx + (Lu * (self.loss_lambda_u * rampup))
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
@@ -324,7 +330,10 @@ class ExperimentBuilderMixMatch(nn.Module):
         self.optimizer.step()  # update network parameters
         self.ema_optimiser.step()
 
-        _, predicted = torch.max(out_x.data, 1)  # get argmax of predictions
+        if len(y.shape) > 1:
+            y = torch.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
+
+        _, predicted = torch.max(logits_x.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
         return loss.data.detach().cpu().numpy(), accuracy
 
@@ -453,7 +462,7 @@ class ExperimentBuilderMixMatch(nn.Module):
             save_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv',
                             stats_dict=total_losses, current_epoch=i,
                             continue_from_mode=True if (
-                                        self.starting_epoch != 0 or i > 0) else False)  # save statistics to stats file.
+                                    self.starting_epoch != 0 or i > 0) else False)  # save statistics to stats file.
 
             # load_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv') # How to load a csv file if you need to
 

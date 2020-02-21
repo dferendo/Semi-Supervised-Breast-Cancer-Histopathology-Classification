@@ -61,9 +61,7 @@ unlabeled_transformation = [transformations_1, transformations_2]
 
 print('Optimiser:', args.optim_type)
 print('Scheduler:', args.sched_type)
-
 # Data Loading
-# TODO: Should validation and test set have data augmentations applied?
 train_dataset, unlabelled_train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath(args.dataset_location),
                                                                                                  transformations,
                                                                                                  magnification=args.magnification,

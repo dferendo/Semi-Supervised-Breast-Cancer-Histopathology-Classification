@@ -23,9 +23,9 @@ class BreaKHisDataset(Dataset):
         class_name = self.df.iloc[idx]['Class Name']
 
         if class_name == 'benign':
-            target = np.array([1, 0])
+            target = np.array([1, 0]).astype(np.float32)
         else:
-            target = np.array([0, 1])
+            target = np.array([0, 1]).astype(np.float32)
 
         image_location = self.df.iloc[idx]['Image Location']
 
