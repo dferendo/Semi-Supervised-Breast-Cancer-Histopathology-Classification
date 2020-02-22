@@ -112,6 +112,7 @@ scheduler_params = {'lr_max': args.learn_rate_max,
                     'erf_beta': args.erf_sched_beta}
 
 if not args.use_mix_match:
+    print('No Mix Match')
     bhc_experiment = ExperimentBuilder(network_model=bch_network,
                                        use_gpu=args.use_gpu,
                                        experiment_name=args.experiment_name,
@@ -125,6 +126,7 @@ if not args.use_mix_match:
                                        scheduler=args.sched_type,
                                        sched_params=scheduler_params)
 else:
+    print('Mix Match')
     bhc_experiment = ExperimentBuilderMixMatch(network_model=bch_network,
                                                use_gpu=args.use_gpu,
                                                experiment_name=args.experiment_name,

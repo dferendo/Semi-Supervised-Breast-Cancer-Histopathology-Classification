@@ -1,6 +1,7 @@
 import torch
 from src.bhcnet_modules import SqueezeExciteLayer, InputConvolutionBlock, SmallSeBlock
 from src.model_architectures import BHCNetwork
+import numpy as np
 
 
 # input_shape = (100,3,224,224)
@@ -17,14 +18,30 @@ def sharpen(p, T):
     return targets_u
 
 
-p_s = (1,5)
-x = torch.rand(p_s)
-x = x / x.sum(dim=1, keepdim=True)
-print(x)
-print(sharpen(x, 0.1))
-print(sharpen(x, 2))
-print(sharpen(x, 10))
+p_s = (2,1,2,2)
+x1 = torch.rand(p_s)
 
-print(x)
+l = np.random.beta(0.8, 0.9, size=x1.shape[0])
+# l = max(l, 1 - l)
+l = np.maximum(l, 1-l)
+l = torch.from_numpy(l)
+
+print(l.shape, l)
+print(x1.shape, x1)
+
+l = l.view((l.shape[0], 1, 1, 1))
+
+f = torch.mul(l,x1)
+
+print(f)
+# x = x1 / x1.sum(dim=1, keepdim=True)
+# print(x1)
+# print(x)
+# print(torch.softmax(x1, dim=1))
+# print(sharpen(x, 0.1))
+# print(sharpen(x, 2))
+# print(sharpen(x, 10))
+#
+# print(x)
 
 

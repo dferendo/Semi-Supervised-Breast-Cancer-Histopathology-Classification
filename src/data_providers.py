@@ -22,9 +22,9 @@ class BreaKHisDataset(Dataset):
         class_name = self.df.iloc[idx]['Class Name']
 
         if class_name == 'benign':
-            target = np.array([1, 0])
+            target = np.array([1, 0]).astype(np.float32)
         else:
-            target = np.array([0, 1])
+            target = np.array([0, 1]).astype(np.float32)
 
         image_location = self.df.iloc[idx]['Image Location']
 
@@ -170,7 +170,8 @@ def split_dataset_into_sets(data_parameters, dataset):
     df_train_labeled = pd.DataFrame(columns=columns)
     df_train_unlabeled = pd.DataFrame(columns=columns)
 
-    if unlabeled_split is not None:
+    if unlabeled_split is not None and unlabeled_split != 0.:
+        print(unlabeled_split)
         assert 0 < unlabeled_split < 1
 
         # Group by subclasses and into two dataframes, one with labeled, one without.
@@ -185,7 +186,8 @@ def split_dataset_into_sets(data_parameters, dataset):
         df_train_labeled = df_train
 
     print(f'Total number of images considered: {len(df)}')
-    print_statistics(df_train, 'Train')
+    print_statistics(df_train_labeled, 'Train')
+    print_statistics(df_train_unlabeled, 'Unlabeled Trained')
     print_statistics(df_val, 'Validation')
     print_statistics(df_test, 'Test')
 
@@ -209,7 +211,7 @@ def get_datasets(data_parameters):
     test_loader = DataLoader(test_dataset, batch_size=data_parameters.batch_size, shuffle=True,
                              num_workers=data_parameters.num_workers, drop_last=True)
 
-    if data_parameters.unlabeled_split is not None:
+    if data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.:
         unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
         train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=data_parameters.batch_size,
                                             shuffle=True, num_workers=data_parameters.num_workers, drop_last=True)
