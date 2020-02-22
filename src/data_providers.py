@@ -1,5 +1,4 @@
-import os
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 
 import os
@@ -60,6 +59,22 @@ class BreaKHisDatasetUnlabelled(Dataset):
         return all_transformations
 
 
+class DataParameters(object):
+    # From 0 to 1
+    val_size = 0.2
+    test_size = 0.2,
+    magnification = None,
+    unlabeled_split = None,
+    unlabeled_transformations = None
+    num_workers = 4
+
+    def __init__(self, data_root, batch_size, transformations, transformations_test):
+        self.data_root = data_root
+        self.batch_size = batch_size
+        self.transformations = transformations
+        self.transformations_test = transformations_test
+
+
 def print_statistics(df, dataset):
     print(f'{dataset} dataset statistics.')
     print(df['Class Name'].value_counts())
@@ -108,17 +123,18 @@ def get_all_images_location_with_classes(data_root):
     return dataset_temp
 
 
-def split_dataset_into_sets(dataset, val_size, test_size, magnification=None, unlabeled_split=None):
+def split_dataset_into_sets(data_parameters, dataset):
     """
     Note: The patients are disjoints from the sets (Ie the same patient is not found in multiple sets)
-    :param unlabeled_split:
-    :param dataset:
-    :param val_size:
-    :param test_size:
-    :param magnification:
+    :param data_parameters:
     :return:
     """
     columns = ['Patient Name', 'Class Name', 'Subclass Name', 'Magnification', 'Image Location']
+
+    magnification = data_parameters.magnification
+    val_size = data_parameters.val_size
+    test_size = data_parameters.test_size
+    unlabeled_split = data_parameters.unlabeled_split
 
     df = pd.DataFrame(dataset, columns=columns)
 
@@ -176,13 +192,31 @@ def split_dataset_into_sets(dataset, val_size, test_size, magnification=None, un
     return df_train_labeled, df_train_unlabeled, df_val, df_test
 
 
-def get_datasets(data_root, transforms, val_size=0.2, test_size=0.2, magnification=None, unlabeled_split=None, unlabeled_transformations=None):
-    dataset = get_all_images_location_with_classes(data_root)
-    df_train_labeled, df_train_unlabeled, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size,
-                                                                                    magnification, unlabeled_split)
+def get_datasets(data_parameters):
+    dataset = get_all_images_location_with_classes(data_parameters.data_root)
+    df_train_labeled, df_train_unlabeled, df_val, df_test = split_dataset_into_sets(data_parameters, dataset)
 
-    return BreaKHisDataset(df_train_labeled, transforms), BreaKHisDatasetUnlabelled(df_train_unlabeled, unlabeled_transformations), \
-        BreaKHisDataset(df_val, transforms), BreaKHisDataset(df_test, transforms)
+    train_dataset = BreaKHisDataset(df_train_labeled, data_parameters.transformations)
+    val_dataset = BreaKHisDataset(df_val, data_parameters.transformations_test)
+    test_dataset = BreaKHisDataset(df_test, data_parameters.transformations_test)
+
+    train_loader = DataLoader(train_dataset, batch_size=data_parameters.batch_size, shuffle=True,
+                              num_workers=data_parameters.num_workers, drop_last=True)
+
+    val_loader = DataLoader(val_dataset, batch_size=data_parameters.batch_size, shuffle=True,
+                            num_workers=data_parameters.num_workers, drop_last=True)
+
+    test_loader = DataLoader(test_dataset, batch_size=data_parameters.batch_size, shuffle=True,
+                             num_workers=data_parameters.num_workers, drop_last=True)
+
+    if data_parameters.unlabeled_split is not None:
+        unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
+        train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=data_parameters.batch_size,
+                                            shuffle=True, num_workers=data_parameters.num_workers, drop_last=True)
+    else:
+        train_unlabeled_loader = None
+
+    return train_loader, train_unlabeled_loader, val_loader, test_loader
 
 
 def calculate_the_mean_and_variance_of_the_dataset(train_loader, validation_loader, test_loader):

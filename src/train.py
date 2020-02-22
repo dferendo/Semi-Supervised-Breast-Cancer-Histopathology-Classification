@@ -35,13 +35,6 @@ else:
     normalization_mean = (0.7868, 0.6263, 0.7642)
     normalization_var = (0.0974, 0.1310, 0.0814)
 
-# Transformations
-transformations = transforms.Compose([
-    transforms.RandomHorizontalFlip(0.5),
-    transforms.Resize((224, 224), interpolation=Image.BILINEAR),
-    transforms.ToTensor(),
-    transforms.Normalize(normalization_mean, normalization_var)
-])
 
 transformations_1 = transforms.Compose([
     transforms.RandomHorizontalFlip(0.5),
@@ -65,6 +58,7 @@ print('Scheduler:', args.sched_type)
 # Data Loading
 train_dataset, unlabelled_train_dataset, val_dataset, test_dataset = data_providers.get_datasets(os.path.abspath(args.dataset_location),
                                                                                                  transformations,
+                                                                                                 transformations_test,
                                                                                                  magnification=args.magnification,
                                                                                                  unlabeled_split=args.unlabelled_split,
                                                                                                  unlabeled_transformations=unlabeled_transformation)

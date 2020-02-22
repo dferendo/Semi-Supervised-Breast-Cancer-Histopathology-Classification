@@ -1,6 +1,4 @@
 import argparse
-import json
-import sys
 
 '''
 Argument extractor. This is a modified version of the files found in https://github.com/CSTR-Edinburgh/mlpractical.
@@ -11,6 +9,7 @@ class AttributeAccessibleDict(object):
     def __init__(self, adict):
         self.__dict__.update(adict)
 
+
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
@@ -20,11 +19,11 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-def get_args():
+def get_shared_arguments():
     """
-    Returns a namedtuple with arguments extracted from the command line.
-    :return: A namedtuple with arguments
-    """
+        Returns a namedtuple with arguments extracted from the command line.
+        :return: A namedtuple with arguments
+        """
     parser = argparse.ArgumentParser(description='Semi-supervised Breast Cancer Classification')
 
     parser.add_argument('--batch_size', nargs="?", type=int, default=100, help='Batch_size for experiment')
@@ -77,35 +76,6 @@ def get_args():
                         help='The amount of the training set to be set as unlabelled (0 to 1)')
 
     args = parser.parse_args()
+    print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
 
-    if args.filepath_to_arguments_json_file is not None:
-        args = extract_args_from_json(json_file_path=args.filepath_to_arguments_json_file, existing_args_dict=args)
-
-    arg_str = [(str(key), str(value)) for (key, value) in vars(args).items()]
-    print(arg_str)
-
-    import torch
-
-    if torch.cuda.is_available():  # checks whether a cuda gpu is available and whether the gpu flag is True
-        device = torch.cuda.current_device()
-        print("use {} GPU(s)".format(torch.cuda.device_count()), file=sys.stderr)
-    else:
-        print("use CPU", file=sys.stderr)
-        device = torch.device('cpu')  # sets the device to be CPU
-
-    return args, device
-
-
-def extract_args_from_json(json_file_path, existing_args_dict=None):
-
-    summary_filename = json_file_path
-    with open(summary_filename) as f:
-        arguments_dict = json.load(fp=f)
-
-    for key, value in vars(existing_args_dict).items():
-        if key not in arguments_dict:
-            arguments_dict[key] = value
-
-    arguments_dict = AttributeAccessibleDict(arguments_dict)
-
-    return arguments_dict
+    return args
