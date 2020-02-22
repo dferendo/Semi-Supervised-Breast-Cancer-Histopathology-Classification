@@ -22,20 +22,14 @@ class WeightEMA(object):
         self.model = model
         self.ema_model = ema_model
         self.alpha = alpha
-        self.params = list(model.state_dict().values())
-        self.ema_params = list(ema_model.state_dict().values())
         self.wd = 0.02 * lr
 
-        for param, ema_param in zip(self.params, self.ema_params):
-            param.data.copy_(ema_param.data)
-
-    def step(self):
+    def step(self, model):
         one_minus_alpha = 1.0 - self.alpha
-        for index, (param, ema_param) in enumerate(zip(self.params, self.ema_params)):
-            self.ema_params[index] = ema_param.mul(self.alpha)
-            self.ema_params[index].add_(param * one_minus_alpha)
-            # customized weight decay
-            self.params[index] = param.mul(1 - self.wd)
+        for name, param in self.ema_model.named_parameters():
+            param.data = (self.alpha * param.data) + (model.state_dict()[name].data * one_minus_alpha)
+            # self.params[index] = param.mul(1 - self.wd)
+        return self.ema_model
 
 
 class SemiLoss(object):
@@ -245,17 +239,20 @@ class ExperimentBuilderMixMatch(nn.Module):
         all_targets.extend([q for i in range(len(u_list))])
         all_targets = torch.cat(all_targets, dim=0)
 
-        # TODO: fix to draw a tensor of lambdas
-        l = np.random.beta(self.mixup_alpha, self.mixup_alpha)
-        l = max(l, 1 - l)
+        l = np.random.beta(self.mixup_alpha, self.mixup_alpha, size=all_inputs.shape[0])
+        l = np.maximum(l, 1-l)
+        l = torch.from_numpy(l).float().to(self.device)
 
         idx = torch.randperm(all_inputs.size(0))
 
         input_a, input_b = all_inputs, all_inputs[idx]
         target_a, target_b = all_targets, all_targets[idx]
 
-        mixed_input = l * input_a + (1 - l) * input_b
-        mixed_target = l * target_a + (1 - l) * target_b
+        l_t = l.view((l.shape[0], 1))
+        mixed_target = l_t * target_a + (1 - l_t) * target_b
+
+        l_i = l.view((l.shape[0], 1, 1, 1))
+        mixed_input = l_i * input_a + (1 - l_i) * input_b
 
         return mixed_input, mixed_target
 
@@ -329,7 +326,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         loss.backward()  # backpropagate to compute gradients for current iter loss
 
         self.optimizer.step()  # update network parameters
-        self.ema_optimiser.step()
+        self.ema_model = self.ema_optimiser.step(model=self.model)
 
         if len(y.shape) > 1:
             y = torch.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
@@ -355,6 +352,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         x = x.to(self.device)
         y = y.to(self.device)
         out = self.ema_model.forward(x)  # forward the data in the model
+        # out = self.model.forward(x)  # forward the data in the model
         loss = F.cross_entropy(out, y)  # compute loss
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
@@ -393,6 +391,9 @@ class ExperimentBuilderMixMatch(nn.Module):
                 current_epoch_losses["train_acc"].append(accuracy)  # add current iter acc to the train acc list
                 pbar_train.update(1)
                 pbar_train.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
+
+                # for param in self.ema_model.parameters():
+                #     print(param.data)
 
         return current_epoch_losses
 
