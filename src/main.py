@@ -5,6 +5,8 @@ from data_providers import DataParameters
 from arg_extractor import get_shared_arguments
 from util import get_processing_device
 from model_architectures import BHCNetwork
+from experiment_builder import ExperimentBuilder
+from ExperimentBuilderMixMatch import ExperimentBuilderMixMatch
 
 import numpy as np
 from torchvision import transforms
@@ -92,7 +94,7 @@ data_parameters.magnification = args.magnification
 data_parameters.unlabeled_split = args.unlabelled_split
 data_parameters.unlabeled_transformations = unlabeled_transformations
 
-train_loader, train_unlabeled_loader, val_loader, test_loaders = data_providers.get_datasets(data_parameters)
+train_loader, train_unlabeled_loader, val_loader, test_loader = data_providers.get_datasets(data_parameters)
 
 # Build the BHC Network
 bch_network = BHCNetwork(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
@@ -109,4 +111,33 @@ scheduler_params = {'lr_max': args.learn_rate_max,
                     'erf_alpha': args.erf_sched_alpha,
                     'erf_beta': args.erf_sched_beta}
 
+if not args.use_mix_match:
+    bhc_experiment = ExperimentBuilder(network_model=bch_network,
+                                       use_gpu=args.use_gpu,
+                                       experiment_name=args.experiment_name,
+                                       num_epochs=args.num_epochs,
+                                       continue_from_epoch=args.continue_from_epoch,
+                                       train_data=train_loader,
+                                       val_data=val_loader,
+                                       test_data=test_loader,
+                                       optimiser=args.optim_type,
+                                       optim_params=optimizer_params,
+                                       scheduler=args.sched_type,
+                                       sched_params=scheduler_params)
+else:
+    bhc_experiment = ExperimentBuilderMixMatch(network_model=bch_network,
+                                               use_gpu=args.use_gpu,
+                                               experiment_name=args.experiment_name,
+                                               num_epochs=args.num_epochs,
+                                               continue_from_epoch=args.continue_from_epoch,
+                                               train_data=train_loader,
+                                               val_data=val_loader,
+                                               test_data=test_loader,
+                                               optimiser=args.optim_type,
+                                               optim_params=optimizer_params,
+                                               scheduler=args.sched_type,
+                                               sched_params=scheduler_params,
+                                               train_data_unlabeled=train_unlabeled_loader,
+                                               lambda_u=0.5)
 
+experiment_metrics, test_metrics = bhc_experiment.run_experiment()

@@ -62,7 +62,7 @@ class BreaKHisDatasetUnlabelled(Dataset):
 class DataParameters(object):
     # From 0 to 1
     val_size = 0.2
-    test_size = 0.2,
+    test_size = 0.2
     magnification = None,
     unlabeled_split = None,
     unlabeled_transformations = None
