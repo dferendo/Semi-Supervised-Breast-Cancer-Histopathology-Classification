@@ -27,7 +27,6 @@ class BreaKHisDataset(Dataset):
             target = np.array([0, 1]).astype(np.float32)
 
         image_location = self.df.iloc[idx]['Image Location']
-
         img = Image.open(image_location)
 
         if self.transform is not None:
@@ -53,8 +52,9 @@ class BreaKHisDatasetUnlabelled(Dataset):
 
         all_transformations = []
 
-        for transformation in self.transform:
-            all_transformations.append(transformation(img))
+        if self.transform is not None:
+            for transformation in self.transform:
+                all_transformations.append(transformation(img))
 
         return all_transformations
 
