@@ -201,9 +201,9 @@ class ExperimentBuilder(nn.Module):
         y_cpu = y.data.cpu()
         predicted_cpu = predicted.cpu()
 
-        f1 = f1_score(y_cpu, predicted_cpu)
-        precision = precision_score(y_cpu, predicted_cpu)
-        recall = recall_score(y_cpu, predicted_cpu)
+        f1 = f1_score(y_cpu, predicted_cpu, average='macro')
+        precision = precision_score(y_cpu, predicted_cpu, average='macro')
+        recall = recall_score(y_cpu, predicted_cpu, average='macro')
 
         return loss.data.detach().cpu().numpy(), accuracy, f1, precision, recall
 

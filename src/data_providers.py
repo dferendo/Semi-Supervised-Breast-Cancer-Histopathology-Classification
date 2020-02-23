@@ -19,12 +19,24 @@ class BreaKHisDataset(Dataset):
 
     def __getitem__(self, idx):
         # Load the image from the file and return the label
-        class_name = self.df.iloc[idx]['Class Name']
+        sub_class_name = self.df.iloc[idx]['Subclass Name']
 
-        if class_name == 'benign':
-            target = np.array([1, 0]).astype(np.float32)
+        if sub_class_name == 'adenosis':
+            target = np.array([1, 0, 0, 0, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'fibroadenoma':
+            target = np.array([0, 1, 0, 0, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'phyllodes_tumor':
+            target = np.array([0, 0, 1, 0, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'tubular_adenoma':
+            target = np.array([0, 0, 0, 1, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'ductal_carcinoma':
+            target = np.array([0, 0, 0, 0, 1, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'lobular_carcinoma':
+            target = np.array([0, 0, 0, 0, 0, 1, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'mucinous_carcinoma':
+            target = np.array([0, 0, 0, 0, 0, 0, 1, 0]).astype(np.float32)
         else:
-            target = np.array([0, 1]).astype(np.float32)
+            target = np.array([0, 0, 0, 0, 0, 0, 0, 1]).astype(np.float32)
 
         image_location = self.df.iloc[idx]['Image Location']
         img = Image.open(image_location)

@@ -100,7 +100,7 @@ train_loader, train_unlabeled_loader, val_loader, test_loader = data_providers.g
 bch_network = BHCNetwork(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
                          num_filters=args.num_filters, num_layers=args.num_layers,
                          use_bias=True,
-                         num_output_classes=2)
+                         num_output_classes=8)
 
 # Parameters for BCH Network
 optimizer_params = {'weight_decay': args.weight_decay_coefficient,
