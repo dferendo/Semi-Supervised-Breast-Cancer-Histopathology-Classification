@@ -20,7 +20,7 @@ do
       erf_sched_beta=3
     fi
 
-    python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 1 --continue_from_epoch -1 --seed 0 \
+    python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --continue_from_epoch -1 --seed 0 \
                          --image_num_channels 3 --image_height 224 --image_width 224 \
                          --num_layers 3 --num_filters 16 \
                          --dataset_location "${DATASET_DIR}" --experiment_name "${experiment_result_location}" \
