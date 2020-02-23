@@ -7,7 +7,7 @@ for magnification in "${magnifications[@]}"
 do
   for unlabelled_split in "${unlabelled_splits[@]}"
   do
-    experiment_result_location="./experiments/base_tune_test_subclasses_1_${magnification}_${unlabelled_split}"
+    experiment_result_location="./experiments/base_tune_test_subclasses_2_${magnification}_${unlabelled_split}"
 
     if [ "$magnification" == "40X" ]
     then
