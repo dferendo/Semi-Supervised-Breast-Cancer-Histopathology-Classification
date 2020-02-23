@@ -4,7 +4,7 @@
 #SBATCH --partition=Teach-Standard
 #SBATCH --gres=gpu:1
 #SBATCH --mem=12000  # memory in Mb
-#SBATCH --time=0-04:00:00
+#SBATCH --time=0-06:00:00
 
 export CUDA_HOME=/opt/cuda-9.0.176.1/
 
@@ -37,12 +37,12 @@ tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz" -C "${DATASET_DIR}"
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
-python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --continue_from_epoch -1 --seed 0 \
+python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 300 --continue_from_epoch -1 --seed 0 \
                      --image_num_channels 3 --image_height 224 --image_width 224 \
-                     --num_layers 3 --num_filters 16 \
+                     --num_layers 6 --num_filters 16 \
                      --dataset_location "${DATASET_DIR}/BreaKHis_v1" --experiment_name "${1}" \
                      --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient 0.0001 \
-                     --sched_type "ERF" --learn_rate_max 0.01 --learn_rate_min 0.0001 \
+                     --sched_type "ERF" --learn_rate_max 0.1 --learn_rate_min 0.0001 \
                      --erf_sched_alpha ${4} --erf_sched_beta ${5} \
                      --magnification "${2}" --unlabelled_split ${3} \
                      --use_mix_match "False"

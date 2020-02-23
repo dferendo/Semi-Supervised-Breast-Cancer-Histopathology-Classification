@@ -7,16 +7,10 @@ for magnification in "${magnifications[@]}"
 do
   for unlabelled_split in "${unlabelled_splits[@]}"
   do
-    experiment_result_location="./experiments/base_tune_test_subclasses_2_${magnification}_${unlabelled_split}"
+    experiment_result_location="./experiments/base_tune_test_subclasses_3_${magnification}_${unlabelled_split}"
 
-    if [ "$magnification" == "40X" ]
-    then
-      erf_sched_alpha=-4
-      erf_sched_beta=4
-    else
-      erf_sched_alpha=-3
-      erf_sched_beta=3
-    fi
+    erf_sched_alpha=-3
+    erf_sched_beta=3
 
     sbatch mlp_cluster_train.sh $experiment_result_location $magnification $unlabelled_split $erf_sched_alpha $erf_sched_beta
   done
