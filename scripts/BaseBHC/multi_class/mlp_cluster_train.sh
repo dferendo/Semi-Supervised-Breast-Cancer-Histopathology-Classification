@@ -37,7 +37,7 @@ tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz" -C "${DATASET_DIR}"
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
-python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 300 --continue_from_epoch -1 --seed 0 \
+python ../../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 300 --continue_from_epoch -1 --seed 0 \
                      --image_num_channels 3 --image_height 224 --image_width 224 \
                      --num_layers 6 --num_filters 16 \
                      --dataset_location "${DATASET_DIR}/BreaKHis_v1" --experiment_name "${1}" \
@@ -45,4 +45,4 @@ python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 300 --con
                      --sched_type "ERF" --learn_rate_max 0.1 --learn_rate_min 0.0001 \
                      --erf_sched_alpha ${4} --erf_sched_beta ${5} \
                      --magnification "${2}" --unlabelled_split ${3} \
-                     --use_mix_match "False"
+                     --use_mix_match "False" --multi_class "True"
