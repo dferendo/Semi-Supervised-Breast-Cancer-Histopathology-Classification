@@ -251,7 +251,7 @@ class BHCNetwork(nn.Module):
             num_filters*=2
 
         self.layer_dict['final_bn'] = nn.BatchNorm2d(num_features=out.shape[1])
-        self.layer_dict['final_bn'].forward(out)
+        out = self.layer_dict['final_bn'].forward(out)
         out = F.relu(out)
 
         print('shape after final small_senet block', out.shape)
@@ -279,9 +279,8 @@ class BHCNetwork(nn.Module):
                 out = self.layer_dict['small_senet_b%d_l%d' % (block_num, layer_num)].forward(out)
             num_filters *= 2
 
-        self.layer_dict['final_bn'].forward(out)
+        out = self.layer_dict['final_bn'].forward(out)
         out = F.relu(out)
-
 
         out = self.layer_dict['final_global_dimred'].forward(out)
 
