@@ -88,7 +88,7 @@ unlabeled_transformations = get_unlabeled_transformations(normalization_mean, no
 
 data_location = os.path.abspath(args.dataset_location)
 
-data_parameters = DataParameters(data_location, args.batch_size, transformations, transformations_test)
+data_parameters = DataParameters(data_location, args.batch_size, transformations, transformations_test, args.multi_class)
 
 data_parameters.magnification = args.magnification
 data_parameters.unlabeled_split = args.unlabelled_split
@@ -96,11 +96,18 @@ data_parameters.unlabeled_transformations = unlabeled_transformations
 
 train_loader, train_unlabeled_loader, val_loader, test_loader = data_providers.get_datasets(data_parameters)
 
+if args.multi_class:
+    print('Multi-class')
+    num_output_classes = 8
+else:
+    print('Binary-class')
+    num_output_classes = 2
+
 # Build the BHC Network
 bch_network = BHCNetwork(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
                          num_filters=args.num_filters, num_layers=args.num_layers,
                          use_bias=True,
-                         num_output_classes=8)
+                         num_output_classes=num_output_classes)
 
 # Parameters for BCH Network
 optimizer_params = {'weight_decay': args.weight_decay_coefficient,

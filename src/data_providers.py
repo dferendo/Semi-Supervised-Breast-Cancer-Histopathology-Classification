@@ -19,6 +19,37 @@ class BreaKHisDataset(Dataset):
 
     def __getitem__(self, idx):
         # Load the image from the file and return the label
+        class_name = self.df.iloc[idx]['Class Name']
+
+        if class_name == 'benign':
+            target = np.array([1, 0]).astype(np.float32)
+        else:
+            target = np.array([0, 1]).astype(np.float32)
+
+        image_location = self.df.iloc[idx]['Image Location']
+        img = Image.open(image_location)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        print('binary')
+
+        return img, target
+
+
+class BreaKHisDatasetMultiClass(Dataset):
+    """
+    Reading the BreaKHis Dataset. Please keep the original dataset structure
+    """
+    def __init__(self, df, transform=None):
+        self.transform = transform
+        self.df = df
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        # Load the image from the file and return the label
         sub_class_name = self.df.iloc[idx]['Subclass Name']
 
         if sub_class_name == 'adenosis':
@@ -43,6 +74,8 @@ class BreaKHisDataset(Dataset):
 
         if self.transform is not None:
             img = self.transform(img)
+
+        print('multi-class')
 
         return img, target
 
@@ -80,11 +113,12 @@ class DataParameters(object):
     unlabeled_transformations = None
     num_workers = 4
 
-    def __init__(self, data_root, batch_size, transformations, transformations_test):
+    def __init__(self, data_root, batch_size, transformations, transformations_test, multi_class):
         self.data_root = data_root
         self.batch_size = batch_size
         self.transformations = transformations
         self.transformations_test = transformations_test
+        self.multi_class = multi_class
 
 
 def print_statistics(df, dataset):
@@ -210,9 +244,14 @@ def get_datasets(data_parameters):
     dataset = get_all_images_location_with_classes(data_parameters.data_root)
     df_train_labeled, df_train_unlabeled, df_val, df_test = split_dataset_into_sets(data_parameters, dataset)
 
-    train_dataset = BreaKHisDataset(df_train_labeled, data_parameters.transformations)
-    val_dataset = BreaKHisDataset(df_val, data_parameters.transformations_test)
-    test_dataset = BreaKHisDataset(df_test, data_parameters.transformations_test)
+    if data_parameters.multi_class:
+        train_dataset = BreaKHisDatasetMultiClass(df_train_labeled, data_parameters.transformations)
+        val_dataset = BreaKHisDatasetMultiClass(df_val, data_parameters.transformations_test)
+        test_dataset = BreaKHisDatasetMultiClass(df_test, data_parameters.transformations_test)
+    else:
+        train_dataset = BreaKHisDataset(df_train_labeled, data_parameters.transformations)
+        val_dataset = BreaKHisDataset(df_val, data_parameters.transformations_test)
+        test_dataset = BreaKHisDataset(df_test, data_parameters.transformations_test)
 
     train_loader = DataLoader(train_dataset, batch_size=data_parameters.batch_size, shuffle=True,
                               num_workers=data_parameters.num_workers, drop_last=True)
@@ -224,7 +263,11 @@ def get_datasets(data_parameters):
                              num_workers=data_parameters.num_workers, drop_last=True)
 
     if data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.:
-        unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
+        if data_parameters.multi_class:
+            unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
+        else:
+            unlabelled_train_dataset = BreaKHisDataset(df_train_unlabeled, data_parameters.unlabeled_transformations)
+
         train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=data_parameters.batch_size,
                                             shuffle=True, num_workers=data_parameters.num_workers, drop_last=True)
     else:
