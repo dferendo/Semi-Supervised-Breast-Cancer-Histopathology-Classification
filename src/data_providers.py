@@ -32,8 +32,6 @@ class BreaKHisDataset(Dataset):
         if self.transform is not None:
             img = self.transform(img)
 
-        print('binary')
-
         return img, target
 
 
@@ -74,8 +72,6 @@ class BreaKHisDatasetMultiClass(Dataset):
 
         if self.transform is not None:
             img = self.transform(img)
-
-        print('multi-class')
 
         return img, target
 
