@@ -103,13 +103,22 @@ else:
     print('Binary-class')
     num_output_classes = 2
 
-# Build the BHC Network
-bch_network = BHCNetwork(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                         num_filters=args.num_filters, num_layers=args.num_layers,
-                         use_bias=True,
-                         num_output_classes=num_output_classes)
+from torchvision import models
+import torch.nn as nn
 
-# Parameters for BCH Network
+model = models.densenet121(pretrained=False, memory_efficient=True)
+
+model.classifier = nn.Linear(in_features=model.classifier.in_features,
+                             out_features=num_output_classes,
+                             bias=True)
+
+# # Build the BHC Network
+# bch_network = BHCNetwork(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
+#                          num_filters=args.num_filters, num_layers=args.num_layers,
+#                          use_bias=True,
+#                          num_output_classes=num_output_classes)
+#
+# # Parameters for BCH Network
 optimizer_params = {'weight_decay': args.weight_decay_coefficient,
                     'momentum': args.momentum,
                     'nesterov': args.nesterov}
@@ -120,7 +129,7 @@ scheduler_params = {'lr_max': args.learn_rate_max,
 
 if not args.use_mix_match:
     print('No Mix Match')
-    bhc_experiment = ExperimentBuilder(network_model=bch_network,
+    bhc_experiment = ExperimentBuilder(network_model=model,
                                        use_gpu=args.use_gpu,
                                        experiment_name=args.experiment_name,
                                        num_epochs=args.num_epochs,

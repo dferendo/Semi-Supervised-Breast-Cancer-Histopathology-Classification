@@ -3,7 +3,7 @@
 export DATASET_DIR="../../../data/BreaKHis_v1/"
 
 magnifications=("40X")
-unlabelled_splits=(0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+unlabelled_splits=(0.9)
 
 for magnification in "${magnifications[@]}"
 do

@@ -38,7 +38,7 @@ class ExperimentBuilder(nn.Module):
 
         self.experiment_name = experiment_name
         self.model = network_model
-        self.model.reset_parameters()
+        # self.model.reset_parameters()
         self.device = torch.cuda.current_device()
 
         if torch.cuda.device_count() > 1 and use_gpu:
