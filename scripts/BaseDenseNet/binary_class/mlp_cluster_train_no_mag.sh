@@ -4,7 +4,7 @@
 #SBATCH --partition=Teach-Standard
 #SBATCH --gres=gpu:1
 #SBATCH --mem=12000  # memory in Mb
-#SBATCH --time=0-01:00:00
+#SBATCH --time=0-04:00:00
 
 export CUDA_HOME=/opt/cuda-9.0.176.1/
 
@@ -42,7 +42,7 @@ python ../../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --
                      --num_layers 3 --num_filters 24 \
                      --dataset_location "${DATASET_DIR}/BreaKHis_v1" --experiment_name "${1}" \
                      --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient ${5} \
-                     --sched_type "Step" --learn_rate_max ${6} --learn_rate_min 0.0001 \
-                     --drop_rate ${4} \
-                     --magnification "${2}" --unlabelled_split ${3} \
+                     --sched_type "Step" --learn_rate_max ${4} --learn_rate_min 0.0001 \
+                     --drop_rate ${3} \
+                     --unlabelled_split ${2} \
                      --use_mix_match "False" --multi_class "False"
