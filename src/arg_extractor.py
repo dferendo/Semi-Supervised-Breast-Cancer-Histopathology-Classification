@@ -78,8 +78,8 @@ def get_shared_arguments():
                         help='Whether to use MixMatch or not')
     parser.add_argument('--multi_class', nargs="?", type=str2bool, default=False,
                         help='Whether to use Multi class or Binary class')
-    parser.add_argument('--drop_rate', nargs="?", type=str2bool, default=False,
-                        help='Whether to use Multi class or Binary class')
+    parser.add_argument('--drop_rate', nargs="?", type=float, default=0.2,
+                        help='Dropout rate')
 
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
