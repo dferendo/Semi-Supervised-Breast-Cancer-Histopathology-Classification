@@ -24,20 +24,20 @@ def get_image_normalization(magnification):
     :return:
     """
     if magnification == '40X':
-        normalization_mean = (0.8035, 0.6524, 0.7726)
-        normalization_var = (0.0782, 0.1073, 0.0765)
+        normalization_mean = (0.7966, 0.6515, 0.7687)
+        normalization_var = (0.0773, 0.1053, 0.0742)
     elif magnification == '100X':
-        normalization_mean = (0.7956, 0.6360, 0.7709)
-        normalization_var = (0.0973, 0.1314, 0.0853)
+        normalization_mean = (0.7869, 0.6278, 0.7647)
+        normalization_var = (0.0981, 0.1291, 0.0835)
     elif magnification == '200X':
-        normalization_mean = (0.7886, 0.6228, 0.7681)
-        normalization_var = (0.0996, 0.1317, 0.0782)
+        normalization_mean = (0.7842, 0.6172, 0.7655)
+        normalization_var = (0.1035, 0.1331, 0.0790)
     elif magnification == '400X':
-        normalization_mean = (0.7565, 0.5902, 0.7428)
-        normalization_var = (0.1163, 0.1556, 0.0857)
+        normalization_mean = (0.7516, 0.5758, 0.7414)
+        normalization_var = (0.1192, 0.1552, 0.0849)
     else:
-        normalization_mean = (0.7868, 0.6263, 0.7642)
-        normalization_var = (0.0974, 0.1310, 0.0814)
+        normalization_mean = (0.7818, 0.6171, 0.7621)
+        normalization_var = (0.0996, 0.1314, 0.0812)
 
     return normalization_mean, normalization_var
 
