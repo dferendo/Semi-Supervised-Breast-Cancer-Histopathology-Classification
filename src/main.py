@@ -13,6 +13,8 @@ from torchvision import transforms
 from PIL import Image
 import torch
 
+from densenet import DenseNet
+
 
 def get_image_normalization(magnification):
     """
@@ -103,14 +105,19 @@ else:
     print('Binary-class')
     num_output_classes = 2
 
-from torchvision import models
-import torch.nn as nn
+# from torchvision import models
+# import torch.nn as nn
+#
+# model = models.densenet121(pretrained=False, memory_efficient=True)
+#
+# model.classifier = nn.Linear(in_features=model.classifier.in_features,
+#                              out_features=num_output_classes,
+#                              bias=True)
 
-model = models.densenet121(pretrained=False, memory_efficient=True)
-
-model.classifier = nn.Linear(in_features=model.classifier.in_features,
-                             out_features=num_output_classes,
-                             bias=True)
+dense_net = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
+                     growth_rate=12, block_config=(16, 16, 16), compression=0.5,
+                     num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=0,
+                     num_classes=num_output_classes, small_inputs=False, efficient=False, use_bias=True)
 
 # # Build the BHC Network
 # bch_network = BHCNetwork(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
@@ -129,7 +136,7 @@ scheduler_params = {'lr_max': args.learn_rate_max,
 
 if not args.use_mix_match:
     print('No Mix Match')
-    bhc_experiment = ExperimentBuilder(network_model=model,
+    bhc_experiment = ExperimentBuilder(network_model=dense_net,
                                        use_gpu=args.use_gpu,
                                        experiment_name=args.experiment_name,
                                        num_epochs=args.num_epochs,
@@ -143,7 +150,7 @@ if not args.use_mix_match:
                                        sched_params=scheduler_params)
 else:
     print('Mix Match')
-    bhc_experiment = ExperimentBuilderMixMatch(network_model=bch_network,
+    bhc_experiment = ExperimentBuilderMixMatch(network_model=dense_net,
                                                use_gpu=args.use_gpu,
                                                experiment_name=args.experiment_name,
                                                num_epochs=args.num_epochs,
