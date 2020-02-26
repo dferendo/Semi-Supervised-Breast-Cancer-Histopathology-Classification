@@ -36,6 +36,7 @@ class DenseLayer(nn.Module):
     def build_module(self):
         # Assuming input shape is the pre-concatenated tensor shape
         # num_input_features should be dim 1 of the 4d tensor
+        print('Dense Layer shape', self.input_shape)
         x = torch.zeros(self.input_shape)
         out = x
 
@@ -59,6 +60,7 @@ class DenseLayer(nn.Module):
 
         # TODO: Checkout dropout 2d
         if self.drop_rate > 0:
+            print('Dropout with', self.drop_rate)
             self.layer_dict['dropout'] = nn.Dropout(p=self.drop_rate)
             out = self.layer_dict['dropout'](out)
 
@@ -67,8 +69,6 @@ class DenseLayer(nn.Module):
     def forward(self, *prev_features):
         # concatenated features
         out = torch.cat(prev_features, 1)
-        print(f'DenseLayer: {out.shape}')
-
         out = self.layer_dict['bn_1'].forward(out)
         out = F.relu(out)
         out = self.layer_dict['conv_1'].forward(out)
@@ -93,6 +93,16 @@ class DenseLayer(nn.Module):
             new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
         return new_features
 
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
+
 
 # TODO: Turn this into mlp style
 class Transition(nn.Sequential):
@@ -102,11 +112,13 @@ class Transition(nn.Sequential):
         self.input_shape = input_shape
         self.num_output_filters = num_output_filters
         self.use_bias = use_bias
+        self.layer_dict = nn.ModuleDict()
 
         # build the network
         self.build_module()
 
     def build_module(self):
+        print('Transition Layer shape', self.input_shape)
         x = torch.zeros(self.input_shape)
         out = x
 
@@ -132,6 +144,16 @@ class Transition(nn.Sequential):
 
         return out
 
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
+
 
 class DenseBlock(nn.Module):
     def __init__(self, input_shape, num_layers, bottleneck_factor, growth_rate, drop_rate, efficient=False, use_bias=True):
@@ -151,12 +173,13 @@ class DenseBlock(nn.Module):
         self.build_module()
 
     def build_module(self):
+        print('\nDense Block', self.input_shape)
         x = torch.zeros(self.input_shape)
-        out = x
+        features = [x]
 
         # self.num_input_features + i * self.growth_rate,
         for i in range(self.num_layers):
-            print('test:', out.shape)
+            out = torch.cat(features, 1)
 
             self.layer_dict['dense_block_%d' % (i + 1)] = DenseLayer(
                 input_shape=out.shape,
@@ -164,10 +187,12 @@ class DenseBlock(nn.Module):
                 bottleneck_factor=self.bottleneck_factor,
                 drop_rate=self.drop_rate,
                 efficient=self.efficient,
+                use_bias=self.use_bias
             )
-            out = self.layer_dict['dense_block_%d' % (i + 1)].forward(out)
+            out = self.layer_dict['dense_block_%d' % (i + 1)].forward(*features)
+            features.append(out)
 
-        return out
+        return torch.cat(features, 1)
 
     def forward(self, init_features):
         features = [init_features]
@@ -176,6 +201,16 @@ class DenseBlock(nn.Module):
             new_features = layer.forward(*features)
             features.append(new_features)
         return torch.cat(features, 1)
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
 
 
 class DenseNet(nn.Module):
@@ -193,7 +228,7 @@ class DenseNet(nn.Module):
         efficient (bool) - set to True to use checkpointing. Much more memory efficient, but slower.
     """
 
-    def __init__(self, input_shape, growth_rate=12, block_config=(16, 16, 16), compression=0.5,
+    def __init__(self, input_shape, growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
                  num_init_features=24, bottleneck_factor=4, drop_rate=0,
                  num_classes=10, small_inputs=True, efficient=False, use_bias=True):
         super(DenseNet, self).__init__()
@@ -210,6 +245,7 @@ class DenseNet(nn.Module):
         self.efficient = efficient
         self.use_bias = use_bias
         self.layer_dict = nn.ModuleDict()
+        self.compression = compression
 
         self.build_module()
 
@@ -217,18 +253,14 @@ class DenseNet(nn.Module):
         x = torch.zeros(self.input_shape)
         out = x
 
-        print(out.shape)
 
         self.layer_dict['input_0'] = InputConvolutionBlock(out.shape, self.num_init_features, self.small_inputs,
                                                            self.use_bias)
 
         out = self.layer_dict['input_0'].forward(out)
-        print(out.shape)
-
+        print('Block config:',self.block_config)
         # Each DenseBlock
         for i, num_layers in enumerate(self.block_config):
-            print(out.shape)
-
             block = DenseBlock(
                 input_shape=out.shape,
                 num_layers=num_layers,
@@ -253,6 +285,10 @@ class DenseNet(nn.Module):
         self.layer_dict['final_bn'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['final_bn'].forward(out)
 
+        out = F.relu(out)
+        out = F.adaptive_avg_pool2d(out, (1, 1))
+        out = torch.flatten(out, 1)
+
         self.layer_dict['final_classifier'] = nn.Linear(out.shape[1], self.num_classes)
         out = self.layer_dict['final_classifier'].forward(out)
 
@@ -268,14 +304,25 @@ class DenseNet(nn.Module):
             if i != len(self.block_config) - 1:
                 out = self.layer_dict[f'transition_{(i + 1)}'].forward(out)
 
+        out = self.layer_dict['final_bn'].forward(out)
+
         out = F.relu(out)
         out = F.adaptive_avg_pool2d(out, (1, 1))
         out = torch.flatten(out, 1)
 
-        out = self.layer_dict['final_bn'].forward(out)
         out = self.layer_dict['final_classifier'].forward(out)
 
         return out
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
 
 
 class InputConvolutionBlock(nn.Module):
@@ -293,7 +340,7 @@ class InputConvolutionBlock(nn.Module):
         self.build_module()
 
     def build_module(self):
-        print("Building First_Convolutional_Block in BHCNet with input shape %s" % (self.input_shape,))
+        print("Building First_Convolutional_Block in Densenet with input shape %s" % (self.input_shape,))
 
         x = torch.zeros(self.input_shape)
         out = x
