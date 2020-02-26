@@ -14,7 +14,6 @@ from PIL import Image
 import torch
 
 from densenet import DenseNet
-import temp
 
 
 def get_image_normalization(magnification):
@@ -42,16 +41,16 @@ def get_image_normalization(magnification):
     return normalization_mean, normalization_var
 
 
-def get_transformations(normalization_mean, normalization_var):
+def get_transformations(normalization_mean, normalization_var, image_height, image_width):
     transformations = transforms.Compose([
         transforms.RandomHorizontalFlip(0.5),
-        transforms.Resize((224, 224), interpolation=Image.BILINEAR),
+        transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
     ])
 
     transformations_test = transforms.Compose([
-        transforms.Resize((224, 224), interpolation=Image.BILINEAR),
+        transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
     ])
@@ -59,17 +58,17 @@ def get_transformations(normalization_mean, normalization_var):
     return transformations, transformations_test
 
 
-def get_unlabeled_transformations(normalization_mean, normalization_var):
+def get_unlabeled_transformations(normalization_mean, normalization_var, image_height, image_width):
     transformations_1 = transforms.Compose([
         transforms.RandomHorizontalFlip(0.5),
-        transforms.Resize((224, 224), interpolation=Image.BILINEAR),
+        transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
     ])
 
     transformations_2 = transforms.Compose([
         transforms.RandomCrop(0.1),
-        transforms.Resize((224, 224), interpolation=Image.BILINEAR),
+        transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
     ])
@@ -86,8 +85,8 @@ torch.manual_seed(seed=args.seed)
 
 # Data Loading
 normalization_mean, normalization_var = get_image_normalization(args.magnification)
-transformations, transformations_test = get_transformations(normalization_mean, normalization_var)
-unlabeled_transformations = get_unlabeled_transformations(normalization_mean, normalization_var)
+transformations, transformations_test = get_transformations(normalization_mean, normalization_var, args.image_height, args.image_height)
+unlabeled_transformations = get_unlabeled_transformations(normalization_mean, normalization_var, args.image_height, args.image_height)
 
 data_location = os.path.abspath(args.dataset_location)
 
@@ -106,8 +105,13 @@ else:
     print('Binary-class')
     num_output_classes = 2
 
-from torchvision import models
-import torch.nn as nn
+model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
+                     growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
+                     num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
+                     num_classes=num_output_classes, small_inputs=False, efficient=False, use_bias=True)
+
+# from torchvision import models
+# import torch.nn as nn
 
 # model = models.densenet121(pretrained=False, memory_efficient=True)
 #
@@ -118,11 +122,6 @@ import torch.nn as nn
 # model = temp.DenseNet(growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
 #                      num_init_features=args.num_filters, bn_size=4, drop_rate=0,
 #                      num_classes=num_output_classes, small_inputs=False, efficient=False)
-
-model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                     growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
-                     num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
-                     num_classes=num_output_classes, small_inputs=False, efficient=False, use_bias=True)
 
 # # Build the BHC Network
 # bch_network = BHCNetwork(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
