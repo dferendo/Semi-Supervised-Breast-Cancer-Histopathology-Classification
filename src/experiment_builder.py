@@ -11,6 +11,8 @@ import time
 from torch.optim import SGD
 
 from torch.optim.adam import Adam
+from torch.optim.lr_scheduler import MultiStepLR
+
 from ERF_Scheduler import ERF
 
 from storage_utils import save_statistics
@@ -77,6 +79,10 @@ class ExperimentBuilder(nn.Module):
                                  alpha=sched_params['erf_alpha'],
                                  beta=sched_params['erf_beta'],
                                  epochs=num_epochs)
+        elif scheduler == 'Step':
+            self.scheduler = MultiStepLR(self.optimzer,
+                                         milestones=[30, 60],
+                                         gamma=0.1)
         elif scheduler is None:
             self.scheduler = None
 

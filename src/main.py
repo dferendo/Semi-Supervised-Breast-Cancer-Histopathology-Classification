@@ -121,7 +121,7 @@ import torch.nn as nn
 
 model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
                      growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
-                     num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=0,
+                     num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
                      num_classes=num_output_classes, small_inputs=False, efficient=False, use_bias=True)
 
 # # Build the BHC Network
