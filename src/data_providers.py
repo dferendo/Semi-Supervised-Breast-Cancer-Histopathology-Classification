@@ -272,26 +272,23 @@ def get_datasets(data_parameters):
     return train_loader, train_unlabeled_loader, val_loader, test_loader
 
 
-def calculate_the_mean_and_variance_of_the_dataset(train_loader, validation_loader, test_loader):
+def calculate_the_mean_and_variance_of_the_dataset(loader):
     """
     Reference: https://discuss.pytorch.org/t/about-normalization-using-pre-trained-vgg16-networks/23560/6
     :param train_loader:
-    :param validation_loader:
-    :param test_loader:
     :return:
     """
     mean = 0.
     std = 0.
     nb_samples = 0.
 
-    for loader in [train_loader, validation_loader, test_loader]:
-        for data in loader:
-            data = data[0]
-            batch_samples = data.size(0)
-            data = data.view(batch_samples, data.size(1), -1)
-            mean += data.mean(2).sum(0)
-            std += data.std(2).sum(0)
-            nb_samples += batch_samples
+    for data in loader:
+        data = data[0]
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
 
     mean /= nb_samples
     std /= nb_samples
