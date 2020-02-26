@@ -26,7 +26,7 @@ do
                          --dataset_location "${DATASET_DIR}" --experiment_name "${experiment_result_location}" \
                          --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient 0.0001 \
                          --sched_type "Step" --learn_rate_max 0.1 --learn_rate_min 0.0001 \
-                         --drop_rate 0.1 \
+                         --drop_rate 0.2 \
                          --erf_sched_alpha ${erf_sched_alpha} --erf_sched_beta ${erf_sched_beta} \
                          --magnification "${magnification}" --unlabelled_split ${unlabelled_split} \
                          --use_mix_match "False" --multi_class "False"

@@ -80,7 +80,7 @@ class ExperimentBuilder(nn.Module):
                                  beta=sched_params['erf_beta'],
                                  epochs=num_epochs)
         elif scheduler == 'Step':
-            self.scheduler = MultiStepLR(self.optimzer,
+            self.scheduler = MultiStepLR(self.optimizer,
                                          milestones=[30, 60],
                                          gamma=0.1)
         elif scheduler is None:
