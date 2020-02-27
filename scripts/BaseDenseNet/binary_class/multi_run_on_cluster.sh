@@ -19,7 +19,9 @@ do
         do
           experiment_result_location="./experiments/base_finetune_test_1_${magnification}_${unlabelled_split}_${dropout}_${weight_decay}_${lr}"
 
-          sbatch mlp_cluster_train.sh $experiment_result_location $magnification $unlabelled_split $dropout $weight_decay $lr
+          if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
+            sbatch mlp_cluster_train.sh $experiment_result_location $magnification $unlabelled_split $dropout $weight_decay $lr
+          fi
         done
       done
     done
