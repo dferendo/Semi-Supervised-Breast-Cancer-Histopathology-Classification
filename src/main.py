@@ -85,12 +85,15 @@ torch.manual_seed(seed=args.seed)
 
 # Data Loading
 normalization_mean, normalization_var = get_image_normalization(args.magnification)
-transformations, transformations_test = get_transformations(normalization_mean, normalization_var, args.image_height, args.image_height)
-unlabeled_transformations = get_unlabeled_transformations(normalization_mean, normalization_var, args.image_height, args.image_height)
+transformations, transformations_test = get_transformations(normalization_mean, normalization_var, args.image_height,
+                                                            args.image_height)
+unlabeled_transformations = get_unlabeled_transformations(normalization_mean, normalization_var, args.image_height,
+                                                          args.image_height)
 
 data_location = os.path.abspath(args.dataset_location)
 
-data_parameters = DataParameters(data_location, args.batch_size, transformations, transformations_test, args.multi_class)
+data_parameters = DataParameters(data_location, args.batch_size, transformations, transformations_test,
+                                 args.multi_class)
 
 data_parameters.magnification = args.magnification
 data_parameters.unlabeled_split = args.unlabelled_split
@@ -106,9 +109,10 @@ else:
     num_output_classes = 2
 
 model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                     growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
-                     num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
-                     num_classes=num_output_classes, small_inputs=False, efficient=False, use_bias=True)
+                 growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
+                 num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
+                 num_classes=num_output_classes, small_inputs=False, efficient=False,
+                 use_bias=True, use_se=args.use_se, se_reduction=args.se_reduction)
 
 # from torchvision import models
 # import torch.nn as nn

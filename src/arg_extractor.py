@@ -80,6 +80,10 @@ def get_shared_arguments():
                         help='Whether to use Multi class or Binary class')
     parser.add_argument('--drop_rate', nargs="?", type=float, default=0.2,
                         help='Dropout rate')
+    parser.add_argument('--use_se', nargs="?", type=str2bool, default=False,
+                        help='Whether to include Squeeze Excite')
+    parser.add_argument('--se_reduction', nargs="?", type=int, default=16,
+                        help='Squeeze Excitation reduction')
 
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
