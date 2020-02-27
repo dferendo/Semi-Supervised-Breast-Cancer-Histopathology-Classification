@@ -104,8 +104,9 @@ class DataParameters(object):
     # From 0 to 1
     val_size = 0.2
     test_size = 0.2
-    magnification = None,
-    unlabeled_split = None,
+    magnification = None
+    unlabeled_split = None
+    labelled_images_amount = None
     unlabeled_transformations = None
     num_workers = 4
 
@@ -177,6 +178,7 @@ def split_dataset_into_sets(data_parameters, dataset):
     val_size = data_parameters.val_size
     test_size = data_parameters.test_size
     unlabeled_split = data_parameters.unlabeled_split
+    labelled_images_amount = data_parameters.labelled_images_amount
 
     df = pd.DataFrame(dataset, columns=columns)
 
@@ -215,15 +217,28 @@ def split_dataset_into_sets(data_parameters, dataset):
     if unlabeled_split is not None and unlabeled_split != 0.:
         print(unlabeled_split)
         assert 0 < unlabeled_split < 1
+        assert labelled_images_amount is None
 
         # Group by subclasses and into two dataframes, one with labeled, one without.
         df_trained_grouped_by_subclass = df_train.groupby(['Subclass Name'])
 
         for group_name, df_group in df_trained_grouped_by_subclass:
-            split_group = np.array_split(df_group, [int(unlabeled_split * len(df_group))])
+            split_group = np.array_split(df_group.sample(frac=1), [int(unlabeled_split * len(df_group))])
 
             df_train_unlabeled = df_train_unlabeled.append(split_group[0])
             df_train_labeled = df_train_labeled.append(split_group[1])
+    elif labelled_images_amount is not None:
+        assert unlabeled_split is None or unlabeled_split == 0
+        assert 0 < labelled_images_amount <= 50
+
+        # Group by subclasses and into two dataframes, one with labeled, one without.
+        df_trained_grouped_by_subclass = df_train.groupby(['Subclass Name'])
+
+        for group_name, df_group in df_trained_grouped_by_subclass:
+            randomize_group = df_group.sample(frac=1)
+
+            df_train_labeled = df_train_labeled.append(randomize_group[:labelled_images_amount])
+            df_train_unlabeled = df_train_unlabeled.append(randomize_group[labelled_images_amount:])
     else:
         df_train_labeled = df_train
 
@@ -259,10 +274,7 @@ def get_datasets(data_parameters):
                              num_workers=data_parameters.num_workers, drop_last=True)
 
     if data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.:
-        if data_parameters.multi_class:
-            unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
-        else:
-            unlabelled_train_dataset = BreaKHisDataset(df_train_unlabeled, data_parameters.unlabeled_transformations)
+        unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
 
         train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=data_parameters.batch_size,
                                             shuffle=True, num_workers=data_parameters.num_workers, drop_last=True)

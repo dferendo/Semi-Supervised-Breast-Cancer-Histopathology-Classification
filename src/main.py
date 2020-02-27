@@ -97,6 +97,7 @@ data_parameters = DataParameters(data_location, args.batch_size, transformations
 
 data_parameters.magnification = args.magnification
 data_parameters.unlabeled_split = args.unlabelled_split
+data_parameters.labelled_images_amount = args.labelled_images_amount
 data_parameters.unlabeled_transformations = unlabeled_transformations
 
 train_loader, train_unlabeled_loader, val_loader, test_loader = data_providers.get_datasets(data_parameters)
