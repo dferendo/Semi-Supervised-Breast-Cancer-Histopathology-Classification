@@ -156,7 +156,7 @@ class Transition(nn.Sequential):
 
 
 class DenseBlock(nn.Module):
-    def __init__(self, input_shape, num_layers, bottleneck_factor, growth_rate, drop_rate, efficient=False, use_bias=True):
+    def __init__(self, input_shape, num_layers, bottleneck_factor, growth_rate, drop_rate, efficient=False, use_bias=True, use_se=False):
         super(DenseBlock, self).__init__()
 
         self.drop_rate = drop_rate
@@ -168,7 +168,7 @@ class DenseBlock(nn.Module):
         # Bottleneck size
         self.bottleneck_factor = bottleneck_factor
         self.num_layers = num_layers
-
+        self.use_se = use_se
         # build the network
         self.build_module()
 
@@ -180,6 +180,12 @@ class DenseBlock(nn.Module):
         # self.num_input_features + i * self.growth_rate,
         for i in range(self.num_layers):
             out = torch.cat(features, 1)
+
+            if self.use_se:
+                self.layer_dict['se_layer'] = SqueezeExciteLayer(input_shape=out.shape,
+                                                                 reduction=16,
+                                                                 use_bias=False)
+                out = self.layer_dict['se_layer'].forward(out)
 
             self.layer_dict['dense_block_%d' % (i + 1)] = DenseLayer(
                 input_shape=out.shape,
@@ -230,7 +236,7 @@ class DenseNet(nn.Module):
 
     def __init__(self, input_shape, growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
                  num_init_features=24, bottleneck_factor=4, drop_rate=0,
-                 num_classes=10, small_inputs=True, efficient=False, use_bias=True):
+                 num_classes=10, small_inputs=True, efficient=False, use_bias=True, use_se=False):
         super(DenseNet, self).__init__()
         assert 0 < compression <= 1, 'compression of densenet should be between 0 and 1'
 
@@ -246,6 +252,7 @@ class DenseNet(nn.Module):
         self.use_bias = use_bias
         self.layer_dict = nn.ModuleDict()
         self.compression = compression
+        self.use_se = use_se
 
         self.build_module()
 
@@ -268,7 +275,8 @@ class DenseNet(nn.Module):
                 growth_rate=self.growth_rate,
                 drop_rate=self.drop_rate,
                 efficient=self.efficient,
-                use_bias=self.use_bias
+                use_bias=self.use_bias,
+                use_se=self.use_se
             )
 
             self.layer_dict[f"denseblock_{i + 1}"] = block
@@ -375,6 +383,67 @@ class InputConvolutionBlock(nn.Module):
             out = self.layer_dict['bn_0'].forward(out)
             out = F.relu(out)
             out = self.layer_dict['pool_0'].forward(out)
+
+        return out
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
+
+
+class SqueezeExciteLayer(nn.Module):
+    def __init__(self, input_shape, reduction=16, use_bias=False):
+        super(SqueezeExciteLayer, self).__init__()
+
+        self.input_shape = input_shape
+        self.reduction = reduction
+        self.channels = self.input_shape[1]
+        self.use_bias = use_bias
+        self.layer_dict = nn.ModuleDict()
+
+        # build the network
+        self.build_module()
+
+    def build_module(self):
+        print("Building Squeeze_Excite_Layer with in and out shape %s and reduction factor %d" % (
+        self.input_shape, self.reduction))
+
+        x = torch.zeros(self.input_shape)
+
+        self.layer_dict['se_global_avg_pool'] = nn.AdaptiveAvgPool2d(1)
+        self.layer_dict['se_fc'] = nn.Sequential(
+            nn.Linear(self.channels, self.channels // self.reduction, bias=self.use_bias),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.channels // self.reduction, self.channels, bias=self.use_bias),
+            nn.Sigmoid()
+        )
+
+        w = self.layer_dict['se_global_avg_pool'] \
+            .forward(x) \
+            .view(self.input_shape[0], self.input_shape[1])
+        w = self.layer_dict['se_fc'].forward(w) \
+            .view(self.input_shape[0], self.input_shape[1], 1, 1) \
+            .expand_as(x)
+
+        out = torch.mul(x, w)
+
+        return out
+
+    def forward(self, x):
+        w = self.layer_dict['se_global_avg_pool'] \
+            .forward(x) \
+            .view(x.shape[0], x.shape[1])
+        w = self.layer_dict['se_fc'].forward(w) \
+            .view(x.shape[0], x.shape[1], 1, 1) \
+            .expand_as(x)
+
+        out = torch.mul(x, w)
 
         return out
 
