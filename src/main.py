@@ -159,7 +159,7 @@ if not args.use_mix_match:
                                        sched_params=scheduler_params)
 else:
     print('Mix Match')
-    bhc_experiment = ExperimentBuilderMixMatch(network_model=dense_net,
+    bhc_experiment = ExperimentBuilderMixMatch(network_model=model,
                                                use_gpu=args.use_gpu,
                                                experiment_name=args.experiment_name,
                                                num_epochs=args.num_epochs,
@@ -172,6 +172,6 @@ else:
                                                scheduler=args.sched_type,
                                                sched_params=scheduler_params,
                                                train_data_unlabeled=train_unlabeled_loader,
-                                               lambda_u=0.5)
+                                               lambda_u=30)
 
 experiment_metrics, test_metrics = bhc_experiment.run_experiment()
