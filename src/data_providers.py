@@ -259,10 +259,7 @@ def get_datasets(data_parameters):
                              num_workers=data_parameters.num_workers, drop_last=True)
 
     if data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.:
-        if data_parameters.multi_class:
-            unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
-        else:
-            unlabelled_train_dataset = BreaKHisDataset(df_train_unlabeled, data_parameters.unlabeled_transformations)
+        unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
 
         train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=data_parameters.batch_size,
                                             shuffle=True, num_workers=data_parameters.num_workers, drop_last=True)
