@@ -41,8 +41,8 @@ python ../../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --
                      --image_num_channels 3 --image_height 224 --image_width 224 \
                      --num_layers 3 --num_filters 24 \
                      --dataset_location "${DATASET_DIR}/BreaKHis_v1" --experiment_name "${1}" \
-                     --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient ${5} \
-                     --sched_type "Step" --learn_rate_max ${4} --learn_rate_min 0.0001 \
+                     --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient ${4} \
+                     --sched_type "Step" --learn_rate_max ${5} --learn_rate_min 0.0001 \
                      --drop_rate ${3} \
                      --unlabelled_split ${2} \
                      --use_mix_match "False" --multi_class "False"

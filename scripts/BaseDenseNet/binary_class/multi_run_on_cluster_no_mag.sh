@@ -14,9 +14,9 @@ do
     do
       for lr in "${learning_rate[@]}"
       do
-        experiment_result_location="./experiments/base_finetune_test_1_no_mag_${unlabelled_split}_${dropout}_${weight_decay}_${lr}"
+        experiment_result_location="./experiments/base_finetune_test_1_nomag_${unlabelled_split}_${dropout}_${weight_decay}_${lr}"
 
-        sbatch mlp_cluster_train.sh $experiment_result_location $unlabelled_split $dropout $weight_decay $lr
+        sbatch mlp_cluster_train_no_mag.sh $experiment_result_location $unlabelled_split $dropout $weight_decay $lr
       done
     done
   done
