@@ -156,7 +156,8 @@ class Transition(nn.Sequential):
 
 
 class DenseBlock(nn.Module):
-    def __init__(self, input_shape, num_layers, bottleneck_factor, growth_rate, drop_rate, efficient=False, use_bias=True, use_se=False):
+    def __init__(self, input_shape, num_layers, bottleneck_factor, growth_rate, drop_rate, efficient=False,
+                 use_bias=True, use_se=False, se_reduction=16):
         super(DenseBlock, self).__init__()
 
         self.drop_rate = drop_rate
@@ -169,6 +170,7 @@ class DenseBlock(nn.Module):
         self.bottleneck_factor = bottleneck_factor
         self.num_layers = num_layers
         self.use_se = use_se
+        self.se_reduction = se_reduction
         # build the network
         self.build_module()
 
@@ -183,7 +185,7 @@ class DenseBlock(nn.Module):
 
             if self.use_se:
                 self.layer_dict['se_layer'] = SqueezeExciteLayer(input_shape=out.shape,
-                                                                 reduction=16,
+                                                                 reduction=self.se_reduction,
                                                                  use_bias=False)
                 out = self.layer_dict['se_layer'].forward(out)
 
@@ -236,7 +238,8 @@ class DenseNet(nn.Module):
 
     def __init__(self, input_shape, growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
                  num_init_features=24, bottleneck_factor=4, drop_rate=0,
-                 num_classes=10, small_inputs=True, efficient=False, use_bias=True, use_se=False):
+                 num_classes=10, small_inputs=True, efficient=False, use_bias=True,
+                 use_se=False, se_reduction=16):
         super(DenseNet, self).__init__()
         assert 0 < compression <= 1, 'compression of densenet should be between 0 and 1'
 
@@ -253,13 +256,13 @@ class DenseNet(nn.Module):
         self.layer_dict = nn.ModuleDict()
         self.compression = compression
         self.use_se = use_se
+        self.se_reduction = se_reduction
 
         self.build_module()
 
     def build_module(self):
         x = torch.zeros(self.input_shape)
         out = x
-
 
         self.layer_dict['input_0'] = InputConvolutionBlock(out.shape, self.num_init_features, self.small_inputs,
                                                            self.use_bias)
@@ -276,7 +279,8 @@ class DenseNet(nn.Module):
                 drop_rate=self.drop_rate,
                 efficient=self.efficient,
                 use_bias=self.use_bias,
-                use_se=self.use_se
+                use_se=self.use_se,
+                se_reduction=self.se_reduction
             )
 
             self.layer_dict[f"denseblock_{i + 1}"] = block
