@@ -2,9 +2,9 @@
 
 export DATASET_DIR="../../../../data/BreaKHis_v1/"
 
-magnification="40X"
+magnification="100X"
 dropout=0.2
-weight_decay=0.001
+weight_decay=0.00001
 learning_rate=0.1
 
 labeled_images_amount=(5 10 25 50)
