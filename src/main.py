@@ -97,6 +97,7 @@ data_parameters = DataParameters(data_location, args.batch_size, transformations
 
 data_parameters.magnification = args.magnification
 data_parameters.unlabeled_split = args.unlabelled_split
+data_parameters.labelled_images_amount = args.labelled_images_amount
 data_parameters.unlabeled_transformations = unlabeled_transformations
 
 train_loader, train_unlabeled_loader, val_loader, test_loader = data_providers.get_datasets(data_parameters)
@@ -158,7 +159,7 @@ if not args.use_mix_match:
                                        sched_params=scheduler_params)
 else:
     print('Mix Match')
-    bhc_experiment = ExperimentBuilderMixMatch(network_model=dense_net,
+    bhc_experiment = ExperimentBuilderMixMatch(network_model=model,
                                                use_gpu=args.use_gpu,
                                                experiment_name=args.experiment_name,
                                                num_epochs=args.num_epochs,
@@ -171,6 +172,6 @@ else:
                                                scheduler=args.sched_type,
                                                sched_params=scheduler_params,
                                                train_data_unlabeled=train_unlabeled_loader,
-                                               lambda_u=0.5)
+                                               lambda_u=30)
 
 experiment_metrics, test_metrics = bhc_experiment.run_experiment()

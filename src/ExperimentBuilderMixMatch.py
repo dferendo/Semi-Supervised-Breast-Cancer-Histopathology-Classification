@@ -12,6 +12,8 @@ import time
 from torch.optim import SGD
 
 from torch.optim.adam import Adam
+from torch.optim.lr_scheduler import MultiStepLR
+
 from ERF_Scheduler import ERF
 
 from storage_utils import save_statistics
@@ -100,21 +102,21 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         self.experiment_name = experiment_name
         self.model = network_model
-        self.ema_model = create_ema_model(self.model)
         self.model.reset_parameters()
+        # self.ema_model = create_ema_model(self.model)
         self.device = torch.cuda.current_device()
 
         if torch.cuda.device_count() > 1 and use_gpu:
             self.device = torch.cuda.current_device()
             self.model.to(self.device)
-            self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
+            # self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
             self.model = nn.DataParallel(module=self.model)
-            self.ema_model = nn.DataParallel(module=self.ema_model)
+            # self.ema_model = nn.DataParallel(module=self.ema_model)
             print('Use Multi GPU', self.device)
         elif torch.cuda.device_count() == 1 and use_gpu:
             self.device = torch.cuda.current_device()
             self.model.to(self.device)  # sends the model from the cpu to the gpu
-            self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
+            # self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
             print('Use GPU', self.device)
         else:
             print("use CPU")
@@ -142,7 +144,7 @@ class ExperimentBuilderMixMatch(nn.Module):
                                  nesterov=optim_params['nesterov'],
                                  weight_decay=optim_params['weight_decay'])
 
-        self.ema_optimiser = WeightEMA(ema_model=self.ema_model, model=self.model, lr=sched_params['lr_max'])
+        # self.ema_optimiser = WeightEMA(ema_model=self.ema_model, model=self.model, lr=sched_params['lr_max'])
 
         if scheduler == 'ERF':
             self.scheduler = ERF(self.optimizer,
@@ -150,6 +152,10 @@ class ExperimentBuilderMixMatch(nn.Module):
                                  alpha=sched_params['erf_alpha'],
                                  beta=sched_params['erf_beta'],
                                  epochs=num_epochs)
+        elif scheduler == 'Step':
+            self.scheduler = MultiStepLR(self.optimizer,
+                                         milestones=[30, 60, 90, 150],
+                                         gamma=0.1)
         elif scheduler is None:
             self.scheduler = None
 
@@ -326,7 +332,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         loss.backward()  # backpropagate to compute gradients for current iter loss
 
         self.optimizer.step()  # update network parameters
-        self.ema_model = self.ema_optimiser.step(model=self.model)
+        # self.ema_model = self.ema_optimiser.step(model=self.model)
 
         if len(y.shape) > 1:
             y = torch.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
@@ -351,8 +357,8 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         x = x.to(self.device)
         y = y.to(self.device)
-        out = self.ema_model.forward(x)  # forward the data in the model
-        # out = self.model.forward(x)  # forward the data in the model
+        # out = self.ema_model.forward(x)  # forward the data in the model
+        out = self.model.forward(x)  # forward the data in the model
         loss = F.cross_entropy(out, y)  # compute loss
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy

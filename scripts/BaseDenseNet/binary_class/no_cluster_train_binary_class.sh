@@ -18,9 +18,10 @@ do
       do
         for lr in "${learning_rate[@]}"
         do
-          experiment_result_location="./experiments/class_test_1_${magnification}_${unlabelled_split}"
+          experiment_result_location="./experiments/base_finetune_test_1_${magnification}_${unlabelled_split}_${dropout}_${weight_decay}_${lr}"
 
-          python ../../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --continue_from_epoch -1 --seed 0 \
+          if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
+            python ../../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --continue_from_epoch -1 --seed 0 \
                 --image_num_channels 3 --image_height 224 --image_width 224 \
                 --num_filters 24 \
                 --dataset_location "${DATASET_DIR}" --experiment_name "${experiment_result_location}" \
@@ -28,6 +29,7 @@ do
                 --sched_type "Step" --learn_rate_max ${lr} --drop_rate ${dropout} \
                 --magnification "${magnification}" --unlabelled_split ${unlabelled_split} \
                 --use_mix_match "False" --multi_class "False"
+          fi
           done
       done
     done

@@ -74,6 +74,8 @@ def get_shared_arguments():
                         help='The location of the dataset')
     parser.add_argument('--unlabelled_split', nargs="?", type=float, default=None,
                         help='The amount of the training set to be set as unlabelled (0 to 1)')
+    parser.add_argument('--labelled_images_amount', nargs="?", type=int, default=None,
+                        help='The amount of labelled images per subclass in the training set')
     parser.add_argument('--use_mix_match', nargs="?", type=str2bool, default=False,
                         help='Whether to use MixMatch or not')
     parser.add_argument('--multi_class', nargs="?", type=str2bool, default=False,

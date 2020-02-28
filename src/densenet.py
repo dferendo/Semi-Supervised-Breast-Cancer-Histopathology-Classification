@@ -278,38 +278,51 @@ class DenseBlock(nn.Module):
         for i in range(self.num_layers):
             out = torch.cat(features, 1)
 
-            if self.use_se:
-                self.layer_dict['dense_se_layer_%d' % (i + 1)] = DenseSeLayer(
-                    input_shape=out.shape,
-                    growth_rate=self.growth_rate,
-                    bottleneck_factor=self.bottleneck_factor,
-                    drop_rate=self.drop_rate,
-                    efficient=self.efficient,
-                    use_bias=self.use_bias,
-                    se_reduction=self.se_reduction
-                )
-                out = self.layer_dict['dense_se_layer_%d' % (i + 1)].forward(*features)
-            else:
-                self.layer_dict['dense_layer_%d' % (i + 1)] = DenseLayer(
-                    input_shape=out.shape,
-                    growth_rate=self.growth_rate,
-                    bottleneck_factor=self.bottleneck_factor,
-                    drop_rate=self.drop_rate,
-                    efficient=self.efficient,
-                    use_bias=self.use_bias
-                )
-                out = self.layer_dict['dense_layer_%d' % (i + 1)].forward(*features)
+            # if self.use_se:
+            #     self.layer_dict['dense_se_layer_%d' % (i + 1)] = DenseSeLayer(
+            #         input_shape=out.shape,
+            #         growth_rate=self.growth_rate,
+            #         bottleneck_factor=self.bottleneck_factor,
+            #         drop_rate=self.drop_rate,
+            #         efficient=self.efficient,
+            #         use_bias=self.use_bias,
+            #         se_reduction=self.se_reduction
+            #     )
+            #     out = self.layer_dict['dense_se_layer_%d' % (i + 1)].forward(*features)
+            # else:
+            self.layer_dict['dense_layer_%d' % (i + 1)] = DenseLayer(
+                input_shape=out.shape,
+                growth_rate=self.growth_rate,
+                bottleneck_factor=self.bottleneck_factor,
+                drop_rate=self.drop_rate,
+                efficient=self.efficient,
+                use_bias=self.use_bias
+            )
+            out = self.layer_dict['dense_layer_%d' % (i + 1)].forward(*features)
             features.append(out)
+        feature_tensor = torch.cat(features, 1)
 
-        return torch.cat(features, 1)
+        if self.use_se:
+            self.layer_dict['se'] = self.layer_dict['se'] = SqueezeExciteLayer(input_shape=feature_tensor.shape,
+                                                   reduction=self.se_reduction,
+                                                   use_bias=False)
+            feature_tensor = self.layer_dict['se'].forward(feature_tensor)
+
+        return feature_tensor
 
     def forward(self, init_features):
         features = [init_features]
 
         for name, layer in self.layer_dict.items():
+            if name == 'se': continue
             new_features = layer.forward(*features)
             features.append(new_features)
-        return torch.cat(features, 1)
+
+        feature_tensor = torch.cat(features, 1)
+
+        if self.use_se:
+            feature_tensor = self.layer_dict['se'].forward(feature_tensor)
+        return feature_tensor
 
     def reset_parameters(self):
         """
