@@ -273,7 +273,7 @@ def get_datasets(data_parameters):
     test_loader = DataLoader(test_dataset, batch_size=data_parameters.batch_size, shuffle=True,
                              num_workers=data_parameters.num_workers, drop_last=True)
 
-    if data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.:
+    if (data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.) or data_parameters.labelled_images_amount is not None:
         unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
 
         train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=data_parameters.batch_size,

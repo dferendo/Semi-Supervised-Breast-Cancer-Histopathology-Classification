@@ -86,7 +86,8 @@ def get_shared_arguments():
                         help='Whether to include Squeeze Excite')
     parser.add_argument('--se_reduction', nargs="?", type=int, default=16,
                         help='Squeeze Excitation reduction')
-
+    parser.add_argument('--loss_lambda_u', nargs="?", type=int, default=75,
+                        help='Mixmatch lambda_u unlabelled loss')
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
 

@@ -26,12 +26,12 @@ class WeightEMA(object):
         self.alpha = alpha
         self.wd = 0.02 * lr
 
-    def step(self, model):
+    def step(self, model, ema_model):
         one_minus_alpha = 1.0 - self.alpha
-        for name, param in self.ema_model.named_parameters():
+        for name, param in ema_model.named_parameters():
             param.data = (self.alpha * param.data) + (model.state_dict()[name].data * one_minus_alpha)
             # self.params[index] = param.mul(1 - self.wd)
-        return self.ema_model
+        return ema_model
 
 
 class SemiLoss(object):
@@ -156,7 +156,7 @@ class ExperimentBuilderMixMatch(nn.Module):
             self.scheduler = MultiStepLR(self.optimizer,
                                          milestones=[30, 60, 90, 150],
                                          gamma=0.1)
-        elif scheduler is None:
+        else:
             self.scheduler = None
 
         print('System learnable parameters')
@@ -332,7 +332,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         loss.backward()  # backpropagate to compute gradients for current iter loss
 
         self.optimizer.step()  # update network parameters
-        # self.ema_model = self.ema_optimiser.step(model=self.model)
+        # self.ema_model = self.ema_optimiser.step(model=self.model, ema_model=self.ema_model)
 
         if len(y.shape) > 1:
             y = torch.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
@@ -398,8 +398,11 @@ class ExperimentBuilderMixMatch(nn.Module):
                 pbar_train.update(1)
                 pbar_train.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
 
+                # g=0
                 # for param in self.ema_model.parameters():
+                #     if g==2: break
                 #     print(param.data)
+                #     g+=1
 
         return current_epoch_losses
 
