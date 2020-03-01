@@ -16,10 +16,10 @@ labeled_images_amount=(5)
 #learning_rates=(0.1 0.01 0.001)
 
 
-seeds=(89436)
+seeds=(9392)
 dropouts=(0.2)
 weight_decays=(0.0001)
-learning_rates=(0.001)
+learning_rates=(0.1)
 
 for seed in "${seeds[@]}"
 do
