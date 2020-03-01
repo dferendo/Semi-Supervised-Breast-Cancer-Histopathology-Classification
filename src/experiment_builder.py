@@ -83,7 +83,11 @@ class ExperimentBuilder(nn.Module):
             self.scheduler = MultiStepLR(self.optimizer,
                                          milestones=[30, 60],
                                          gamma=0.1)
-        elif scheduler is None:
+        elif scheduler == 'Cos':
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
+                                                                  T_max=num_epochs,
+                                                                  eta_min=0.00001)
+        else:
             self.scheduler = None
 
         print('System learnable parameters')
@@ -163,11 +167,11 @@ class ExperimentBuilder(nn.Module):
         if len(y.shape) > 1:
             y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
 
-        #print(type(x))
+        # print(type(x))
 
         if type(x) is np.ndarray:
             x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
-            device=self.device)  # send data to device as torch tensors
+                device=self.device)  # send data to device as torch tensors
 
         x = x.to(self.device)
         y = y.to(self.device)
@@ -195,7 +199,7 @@ class ExperimentBuilder(nn.Module):
             y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
         if type(x) is np.ndarray:
             x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
-            device=self.device)  # convert data to pytorch tensors and send to the computation device
+                device=self.device)  # convert data to pytorch tensors and send to the computation device
 
         x = x.to(self.device)
         y = y.to(self.device)
@@ -274,7 +278,6 @@ class ExperimentBuilder(nn.Module):
                     "loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))  # update progress bar string output
         return current_epoch_losses
 
-
     def load_model(self, model_save_dir, model_save_name, model_idx):
         """
         Load the network parameter state and the best val model idx and best val acc to be compared with the future val accuracies, in order to choose the best val model
@@ -293,7 +296,8 @@ class ExperimentBuilder(nn.Module):
         :return: The summary current_epoch_losses from starting epoch to total_epochs.
         """
         total_losses = {"train_acc": [], "train_loss": [], "val_acc": [],
-                        "val_loss": [], "val_f1": [], "val_precision": [], "val_recall": [], "curr_epoch": []}  # initialize a dict to keep the per-epoch metrics
+                        "val_loss": [], "val_f1": [], "val_precision": [], "val_recall": [],
+                        "curr_epoch": []}  # initialize a dict to keep the per-epoch metrics
         for i, epoch_idx in enumerate(range(self.starting_epoch, self.num_epochs)):
             epoch_start_time = time.time()
             current_epoch_losses = {"train_acc": [], "train_loss": [], "val_acc": [], "val_loss": [],
@@ -318,7 +322,8 @@ class ExperimentBuilder(nn.Module):
             total_losses['curr_epoch'].append(epoch_idx)
             save_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv',
                             stats_dict=total_losses, current_epoch=i,
-                            continue_from_mode=True if (self.starting_epoch != 0 or i > 0) else False) # save statistics to stats file.
+                            continue_from_mode=True if (
+                                        self.starting_epoch != 0 or i > 0) else False)  # save statistics to stats file.
 
             # load_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv') # How to load a csv file if you need to
 
@@ -342,7 +347,8 @@ class ExperimentBuilder(nn.Module):
         self.load_model(model_save_dir=self.experiment_saved_models, model_idx=self.best_val_model_idx,
                         # load best validation model
                         model_save_name="train_model")
-        current_epoch_losses = {"test_acc": [], "test_loss": [], "test_f1": [], "test_precision": [], "test_recall": []}  # initialize a statistics dict
+        current_epoch_losses = {"test_acc": [], "test_loss": [], "test_f1": [], "test_precision": [],
+                                "test_recall": []}  # initialize a statistics dict
 
         current_epoch_losses = self.run_testing_epoch(current_epoch_losses=current_epoch_losses)
 

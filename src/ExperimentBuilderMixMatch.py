@@ -156,6 +156,10 @@ class ExperimentBuilderMixMatch(nn.Module):
             self.scheduler = MultiStepLR(self.optimizer,
                                          milestones=[30, 60, 90, 150],
                                          gamma=0.1)
+        elif scheduler == 'Cos':
+            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
+                                                                  T_max=num_epochs,
+                                                                  eta_min=0.00001)
         else:
             self.scheduler = None
 
