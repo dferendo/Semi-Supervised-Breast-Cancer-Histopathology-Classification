@@ -1,13 +1,13 @@
 #!/bin/sh
 
-export DATASET_DIR="../../../../data/BreaKHis_v1/"
+export DATASET_DIR="../../data/BreaKHis_v1/"
 
 magnification="100X"
 #dropout=0.2
 #weight_decay=0.00001
 #learning_rate=0.1
 
-loss_lambda_u=75
+loss_lambda_u=30
 #
 labeled_images_amount=(5)
 #seeds=(324832 9392 344 89436)
@@ -15,11 +15,13 @@ labeled_images_amount=(5)
 #weight_decays=(0.001 0.00001 0.0001)
 #learning_rates=(0.1 0.01 0.001)
 
+# best dropout 0.2 wd 0.001 lr 0.001
+# 2nd dropout 0 wd 1e-5 lr 0.001
 
 seeds=(9392)
-dropouts=(0.2)
-weight_decays=(0.0001)
-learning_rates=(0.1)
+dropouts=(0)
+weight_decays=(0.001)
+learning_rates=(0.001)
 
 for seed in "${seeds[@]}"
 do
@@ -31,9 +33,9 @@ do
       do
         for learning_rate in "${learning_rates[@]}"
         do
-          experiment_result_location="./experiments/noema_SGD_cos_${magnification}_${seed}_${labeled_images}_${loss_lambda_u}_${dropout}_${weight_decay}_${learning_rate}"
+          experiment_result_location="./experiments/noema_SGD_cos_reduced_params_6666_${magnification}_${seed}_${labeled_images}_${loss_lambda_u}_${dropout}_${weight_decay}_${learning_rate}"
 
-          python ../../../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --continue_from_epoch -1 --seed ${seed} \
+          python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 100 --continue_from_epoch -1 --seed ${seed} \
                         --image_num_channels 3 --image_height 224 --image_width 224 \
                         --num_filters 24 \
                         --dataset_location "${DATASET_DIR}" --experiment_name "${experiment_result_location}" \

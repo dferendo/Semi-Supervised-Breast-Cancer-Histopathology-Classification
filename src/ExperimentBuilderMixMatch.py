@@ -160,6 +160,10 @@ class ExperimentBuilderMixMatch(nn.Module):
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
                                                                   T_max=num_epochs,
                                                                   eta_min=0.00001)
+        elif scheduler == 'CosWR':
+            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(self.optimizer,
+                                                                            T_0=15,
+                                                                            eta_min=0.00001)
         else:
             self.scheduler = None
 
@@ -250,7 +254,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         all_targets = torch.cat(all_targets, dim=0)
 
         l = np.random.beta(self.mixup_alpha, self.mixup_alpha, size=all_inputs.shape[0])
-        l = np.maximum(l, 1-l)
+        l = np.maximum(l, 1 - l)
         l = torch.from_numpy(l).float().to(self.device)
 
         idx = torch.randperm(all_inputs.size(0))
