@@ -314,7 +314,6 @@ class DenseBlock(nn.Module):
         features = [init_features]
 
         for name, layer in self.layer_dict.items():
-            if name == 'se': continue
             new_features = layer.forward(*features)
             features.append(new_features)
 
