@@ -353,7 +353,7 @@ class DenseNet(nn.Module):
     def __init__(self, input_shape, growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
                  num_init_features=24, bottleneck_factor=4, drop_rate=0,
                  num_classes=10, small_inputs=True, efficient=False, use_bias=True,
-                 use_se=False, se_reduction=16):
+                 use_se=False, se_reduction=16, no_classification=False):
         super(DenseNet, self).__init__()
         assert 0 < compression <= 1, 'compression of densenet should be between 0 and 1'
 
@@ -371,6 +371,7 @@ class DenseNet(nn.Module):
         self.compression = compression
         self.use_se = use_se
         self.se_reduction = se_reduction
+        self.no_classification = no_classification
 
         self.build_module()
 
@@ -411,12 +412,13 @@ class DenseNet(nn.Module):
         self.layer_dict['final_bn'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['final_bn'].forward(out)
 
-        out = F.relu(out)
-        out = F.adaptive_avg_pool2d(out, (1, 1))
-        out = torch.flatten(out, 1)
+        if not self.no_classification:
+            out = F.relu(out)
+            out = F.adaptive_avg_pool2d(out, (1, 1))
+            out = torch.flatten(out, 1)
 
-        self.layer_dict['final_classifier'] = nn.Linear(out.shape[1], self.num_classes)
-        out = self.layer_dict['final_classifier'].forward(out)
+            self.layer_dict['final_classifier'] = nn.Linear(out.shape[1], self.num_classes)
+            out = self.layer_dict['final_classifier'].forward(out)
 
         return out
 
@@ -432,11 +434,12 @@ class DenseNet(nn.Module):
 
         out = self.layer_dict['final_bn'].forward(out)
 
-        out = F.relu(out)
-        out = F.adaptive_avg_pool2d(out, (1, 1))
-        out = torch.flatten(out, 1)
+        if not self.no_classification:
+            out = F.relu(out)
+            out = F.adaptive_avg_pool2d(out, (1, 1))
+            out = torch.flatten(out, 1)
 
-        out = self.layer_dict['final_classifier'].forward(out)
+            out = self.layer_dict['final_classifier'].forward(out)
 
         return out
 

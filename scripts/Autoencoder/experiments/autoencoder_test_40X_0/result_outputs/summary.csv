@@ -1,0 +1,12 @@
+train_acc,train_loss,val_acc,val_loss,val_f1,val_precision,val_recall,curr_epoch
+0.0,1.6876166,nan,nan,nan,nan,nan,0
+0.0,1.6783296,nan,nan,nan,nan,nan,1
+0.0,1.6413283,nan,nan,nan,nan,nan,2
+0.0,1.59892,nan,nan,nan,nan,nan,3
+0.0,1.5742849,nan,nan,nan,nan,nan,4
+0.0,1.5654058,nan,nan,nan,nan,nan,5
+0.0,1.566913,nan,nan,nan,nan,nan,6
+0.0,1.55481,nan,nan,nan,nan,nan,7
+0.0,1.5565313,nan,nan,nan,nan,nan,8
+0.0,1.5542676,nan,nan,nan,nan,nan,9
+0.0,1.5523114,nan,nan,nan,nan,nan,10
