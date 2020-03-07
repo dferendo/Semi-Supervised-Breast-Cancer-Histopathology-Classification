@@ -13,7 +13,7 @@ import numpy as np
 from torchvision import transforms
 from PIL import Image
 import torch
-from randaugment import RandomAugment
+from randaugment import RandAugment
 
 from densenet import DenseNet
 
@@ -70,7 +70,7 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
 
     transformations_2 = transforms.Compose([
         transforms.RandomHorizontalFlip(0.5),
-        RandomAugment(2, 10),
+        RandAugment(),
         transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
@@ -123,16 +123,16 @@ else:
 #(6, 12, 24, 16)
 # (6, 6, 6, 6)
 model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                 growth_rate=12, block_config=(6, 6, 6, 6), compression=0.5,
+                 growth_rate=12, block_config=(6, 12, 24, 24), compression=0.5,
                  num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
                  num_classes=num_output_classes, small_inputs=False, efficient=False,
                  use_bias=True, use_se=args.use_se, se_reduction=args.se_reduction)
-
+#
 # from torchvision import models
 # import torch.nn as nn
 
-# model = models.densenet121(pretrained=False, memory_efficient=True)
-#
+# model = models.densenet121(pretrained=True, memory_efficient=True)
+
 # model.classifier = nn.Linear(in_features=model.classifier.in_features,
 #                              out_features=num_output_classes,
 #                              bias=True)
@@ -202,6 +202,6 @@ else:
                                                sched_params=scheduler_params,
                                                train_data_unlabeled=train_unlabeled_loader,
                                                lambda_u=args.loss_lambda_u,
-                                               threshold=0.90)
+                                               threshold=0.95)
 
 experiment_metrics, test_metrics = bhc_experiment.run_experiment()

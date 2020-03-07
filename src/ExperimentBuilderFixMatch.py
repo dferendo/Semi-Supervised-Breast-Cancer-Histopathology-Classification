@@ -42,7 +42,6 @@ class ExperimentBuilderFixMatch(nn.Module):
         self.experiment_name = experiment_name
         self.model = network_model
         # self.model.reset_parameters()
-        self.ema = EMA(model=self.model, alpha=0.999)
         self.device = torch.cuda.current_device()
 
         if torch.cuda.device_count() > 1 and use_gpu:
@@ -58,6 +57,8 @@ class ExperimentBuilderFixMatch(nn.Module):
             print("use CPU")
             self.device = torch.device('cpu')  # sets the device to be CPU
             print(self.device)
+
+        self.ema = EMA(model=self.model, alpha=0.999)
 
         # re-initialize network parameters
         self.train_data = train_data
@@ -197,8 +198,8 @@ class ExperimentBuilderFixMatch(nn.Module):
 
         u_weak = u[0]
         u_strong = u[1]
-        u_weak.to(self.device, non_blocking=True)
-        u_strong.to(self.device, non_blocking=True)
+        u_weak = u_weak.to(self.device, non_blocking=True)
+        u_strong = u_strong.to(self.device, non_blocking=True)
 
         u_guessed_labels, valid_idx = self.guess_labels(u_weak, self.threshold)
         u_guessed_labels = u_guessed_labels.to(self.device, non_blocking=True)
@@ -206,9 +207,12 @@ class ExperimentBuilderFixMatch(nn.Module):
         x = x.to(self.device, non_blocking=True)
         y = y.to(self.device, non_blocking=True)
 
-        u_strong = u_strong[valid_idx]
-        u_strong_out = self.model.forward(u_strong)
-        unlabelled_loss = self.unlabelled_criterion(input=u_strong_out, target=u_guessed_labels)
+        if valid_idx.any():
+            u_strong = u_strong[valid_idx]
+            u_strong_out = self.model.forward(u_strong)
+            unlabelled_loss = self.unlabelled_criterion(input=u_strong_out, target=u_guessed_labels)
+        else:
+            unlabelled_loss = torch.tensor(0)
 
         out = self.model.forward(x)  # forward the data in the model
         labelled_loss = self.labelled_criterion(input=out, target=y)  # compute loss
