@@ -7,11 +7,13 @@ from util import get_processing_device
 from model_architectures import BHCNetwork
 from experiment_builder import ExperimentBuilder
 from ExperimentBuilderMixMatch import ExperimentBuilderMixMatch
+from ExperimentBuilderFixMatch import ExperimentBuilderFixMatch
 
 import numpy as np
 from torchvision import transforms
 from PIL import Image
 import torch
+from randaugment import RandomAugment
 
 from densenet import DenseNet
 
@@ -67,12 +69,20 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
     ])
 
     transformations_2 = transforms.Compose([
-        transforms.RandomAffine(translate=(0.1, 0.1), degrees=0),
-        # transforms.RandomCrop(0.1),
+        transforms.RandomHorizontalFlip(0.5),
+        RandomAugment(2, 10),
         transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
     ])
+
+    # transformations_2 = transforms.Compose([
+    #     transforms.RandomAffine(translate=(0.1, 0.1), degrees=0),
+    #     # transforms.RandomCrop(0.1),
+    #     transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
+    #     transforms.ToTensor(),
+    #     transforms.Normalize(normalization_mean, normalization_var)
+    # ])
 
     return [transformations_1, transformations_2]
 
@@ -161,8 +171,24 @@ if not args.use_mix_match:
                                        scheduler=args.sched_type,
                                        sched_params=scheduler_params)
 else:
-    print('Mix Match')
-    bhc_experiment = ExperimentBuilderMixMatch(network_model=model,
+    # print('Mix Match')
+    # bhc_experiment = ExperimentBuilderMixMatch(network_model=model,
+    #                                            use_gpu=args.use_gpu,
+    #                                            experiment_name=args.experiment_name,
+    #                                            num_epochs=args.num_epochs,
+    #                                            continue_from_epoch=args.continue_from_epoch,
+    #                                            train_data=train_loader,
+    #                                            val_data=val_loader,
+    #                                            test_data=test_loader,
+    #                                            optimiser=args.optim_type,
+    #                                            optim_params=optimizer_params,
+    #                                            scheduler=args.sched_type,
+    #                                            sched_params=scheduler_params,
+    #                                            train_data_unlabeled=train_unlabeled_loader,
+    #                                            lambda_u=args.loss_lambda_u)
+
+    print('Fix Match')
+    bhc_experiment = ExperimentBuilderFixMatch(network_model=model,
                                                use_gpu=args.use_gpu,
                                                experiment_name=args.experiment_name,
                                                num_epochs=args.num_epochs,
@@ -175,6 +201,7 @@ else:
                                                scheduler=args.sched_type,
                                                sched_params=scheduler_params,
                                                train_data_unlabeled=train_unlabeled_loader,
-                                               lambda_u=args.loss_lambda_u)
+                                               lambda_u=args.loss_lambda_u,
+                                               threshold=0.90)
 
 experiment_metrics, test_metrics = bhc_experiment.run_experiment()

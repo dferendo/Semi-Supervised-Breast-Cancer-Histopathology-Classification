@@ -19,7 +19,7 @@ from storage_utils import save_statistics
 from sklearn.metrics import f1_score, precision_score, recall_score
 
 
-class ExperimentBuilder(nn.Module):
+class ExperimentBuilderFixMatch(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data, train_data_unlabeled,
                  test_data, use_gpu, continue_from_epoch=-1,
                  scheduler=None, optimiser=None, sched_params=None, optim_params=None,
@@ -37,7 +37,7 @@ class ExperimentBuilder(nn.Module):
         :param use_gpu: A boolean indicating whether to use a GPU or not.
         :param continue_from_epoch: An int indicating whether we'll start from scrach (-1) or whether we'll reload a previously saved model of epoch 'continue_from_epoch' and continue training from there.
         """
-        super(ExperimentBuilder, self).__init__()
+        super(ExperimentBuilderFixMatch, self).__init__()
 
         self.experiment_name = experiment_name
         self.model = network_model
