@@ -11,7 +11,7 @@ import time
 from torch.optim import SGD
 
 from torch.optim.adam import Adam
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, _LRScheduler
 
 from ERF_Scheduler import ERF
 
@@ -20,7 +20,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 
 
 class ExperimentBuilder(nn.Module):
-    def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
+    def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data, train_data_unlabeled,
                  test_data, use_gpu, continue_from_epoch=-1,
                  scheduler=None, optimiser=None, sched_params=None, optim_params=None,
                  threshold=None, lambda_u=None):
@@ -42,6 +42,7 @@ class ExperimentBuilder(nn.Module):
         self.experiment_name = experiment_name
         self.model = network_model
         # self.model.reset_parameters()
+        self.ema = EMA(model=self.model, alpha=0.999)
         self.device = torch.cuda.current_device()
 
         if torch.cuda.device_count() > 1 and use_gpu:
@@ -62,6 +63,8 @@ class ExperimentBuilder(nn.Module):
         self.train_data = train_data
         self.val_data = val_data
         self.test_data = test_data
+        self.train_data_unlabeled = train_data_unlabeled
+        self.temp = train_data_unlabeled
 
         self.loss_lambda_u = lambda_u
         self.threshold = threshold
@@ -77,6 +80,7 @@ class ExperimentBuilder(nn.Module):
                                  nesterov=optim_params['nesterov'],
                                  weight_decay=optim_params['weight_decay'])
 
+        self.scheduler_type = scheduler
         if scheduler == 'ERF':
             self.scheduler = ERF(self.optimizer,
                                  min_lr=sched_params['lr_min'],
@@ -91,8 +95,11 @@ class ExperimentBuilder(nn.Module):
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
                                                                   T_max=num_epochs,
                                                                   eta_min=0.00001)
+        elif scheduler == 'FixMatchCos':
+            self.scheduler = WarmupCosineLrScheduler(self.optimizer, max_iter=num_epochs*len(train_data), warmup_iter=0)
         else:
             self.scheduler = None
+            self.scheduler_type = None
 
         print('System learnable parameters')
         num_conv_layers = 0
@@ -194,28 +201,35 @@ class ExperimentBuilder(nn.Module):
         u_strong.to(self.device, non_blocking=True)
 
         u_guessed_labels, valid_idx = self.guess_labels(u_weak, self.threshold)
+        u_guessed_labels = u_guessed_labels.to(self.device, non_blocking=True)
 
         x = x.to(self.device, non_blocking=True)
         y = y.to(self.device, non_blocking=True)
 
         u_strong = u_strong[valid_idx]
         u_strong_out = self.model.forward(u_strong)
-        unlabelled_loss = self.unlabelled_criterion(u_strong_out)
+        unlabelled_loss = self.unlabelled_criterion(input=u_strong_out, target=u_guessed_labels)
 
         out = self.model.forward(x)  # forward the data in the model
         labelled_loss = self.labelled_criterion(input=out, target=y)  # compute loss
 
-        loss = labelled_loss + (self.loss_lambda_u*unlabelled_loss)
+        loss = labelled_loss + (self.loss_lambda_u * unlabelled_loss)
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
 
+        self.ema.update_params()
+
         self.optimizer.step()  # update network parameters
+
+        if self.scheduler is not None and self.scheduler_type is 'FixMatchCos':
+            self.scheduler.step()
+
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
         return loss.data.detach().cpu().numpy(), accuracy
 
-    def run_evaluation_iter(self, x, y):
+    def run_evaluation_iter(self, x, y, model):
         """
         Receives the inputs and targets for the model and runs an evaluation iterations. Returns loss and accuracy metrics.
         :param x: The inputs to the model. A numpy array of shape batch_size, channels, height, width
@@ -231,7 +245,7 @@ class ExperimentBuilder(nn.Module):
 
         x = x.to(self.device)
         y = y.to(self.device)
-        out = self.model.forward(x)  # forward the data in the model
+        out = model.forward(x)  # forward the data in the model
         loss = F.cross_entropy(out, y)  # compute loss
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
@@ -275,13 +289,18 @@ class ExperimentBuilder(nn.Module):
                 pbar_train.update(1)
                 pbar_train.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
 
+            self.ema.update_buffer()
+
         return current_epoch_losses
 
     def run_validation_epoch(self, current_epoch_losses):
+        self.ema.apply_shadow()
+        self.ema.model.eval()
+        self.ema.model.cuda()
 
         with tqdm.tqdm(total=len(self.val_data), file=sys.stdout) as pbar_val:  # create a progress bar for validation
             for x, y in self.val_data:  # get data batches
-                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
+                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x, y=y, model=self.ema.model)  # run a validation iter
 
                 current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
                 current_epoch_losses["val_acc"].append(accuracy)  # add current iter acc to val acc lst.
@@ -292,6 +311,7 @@ class ExperimentBuilder(nn.Module):
                 pbar_val.update(1)  # add 1 step to the progress bar
                 pbar_val.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
 
+        self.ema.restore()
         return current_epoch_losses
 
     def run_testing_epoch(self, current_epoch_losses):
@@ -340,7 +360,7 @@ class ExperimentBuilder(nn.Module):
             current_epoch_losses = self.run_training_epoch(current_epoch_losses)
             current_epoch_losses = self.run_validation_epoch(current_epoch_losses)
 
-            if self.scheduler is not None:
+            if self.scheduler is not None and self.scheduler_type is not 'FixMatchCos':
                 self.scheduler.step()
 
             val_mean_accuracy = np.mean(current_epoch_losses['val_acc'])
@@ -357,7 +377,7 @@ class ExperimentBuilder(nn.Module):
             save_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv',
                             stats_dict=total_losses, current_epoch=i,
                             continue_from_mode=True if (
-                                        self.starting_epoch != 0 or i > 0) else False)  # save statistics to stats file.
+                                    self.starting_epoch != 0 or i > 0) else False)  # save statistics to stats file.
 
             # load_statistics(experiment_log_dir=self.experiment_logs, filename='summary.csv') # How to load a csv file if you need to
 
@@ -394,3 +414,95 @@ class ExperimentBuilder(nn.Module):
                         stats_dict=test_losses, current_epoch=0, continue_from_mode=False)
 
         return total_losses, test_losses
+
+
+class EMA(object):
+    # From https://github.com/CoinCheung/fixmatch/
+    def __init__(self, model, alpha):
+        self.step = 0
+        self.model = model
+        self.alpha = alpha
+        self.shadow = self.get_model_state()
+        self.backup = {}
+        self.param_keys = [k for k, _ in self.model.named_parameters()]
+        self.buffer_keys = [k for k, _ in self.model.named_buffers()]
+
+    def update_params(self):
+        decay = min(self.alpha, (self.step + 1) / (self.step + 10))
+        state = self.model.state_dict()
+        for name in self.param_keys:
+            self.shadow[name].copy_(
+                decay * self.shadow[name]
+                + (1 - decay) * state[name]
+            )
+        #  for name in self.buffer_keys:
+        #      self.shadow[name].copy_(
+        #          decay * self.shadow[name]
+        #          + (1 - decay) * state[name]
+        #      )
+        self.step += 1
+
+    def update_buffer(self):
+        state = self.model.state_dict()
+        for name in self.buffer_keys:
+            self.shadow[name].copy_(state[name])
+
+    def apply_shadow(self):
+        self.backup = self.get_model_state()
+        self.model.load_state_dict(self.shadow)
+
+    def restore(self):
+        self.model.load_state_dict(self.backup)
+
+    def get_model_state(self):
+        return {
+            k: v.clone().detach()
+            for k, v in self.model.state_dict().items()
+        }
+
+
+class WarmupCosineLrScheduler(_LRScheduler):
+    '''
+    This is different from official definition, this is implemented according to
+    the paper of fix-match
+
+    # From https://github.com/CoinCheung/fixmatch/
+    '''
+
+    def __init__(
+            self,
+            optimizer,
+            max_iter,
+            warmup_iter,
+            warmup_ratio=5e-4,
+            warmup='exp',
+            last_epoch=-1,
+    ):
+        self.max_iter = max_iter
+        self.warmup_iter = warmup_iter
+        self.warmup_ratio = warmup_ratio
+        self.warmup = warmup
+        super(WarmupCosineLrScheduler, self).__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        ratio = self.get_lr_ratio()
+        lrs = [ratio * lr for lr in self.base_lrs]
+        return lrs
+
+    def get_lr_ratio(self):
+        if self.last_epoch < self.warmup_iter:
+            ratio = self.get_warmup_ratio()
+        else:
+            real_iter = self.last_epoch - self.warmup_iter
+            real_max_iter = self.max_iter - self.warmup_iter
+            ratio = np.cos((7 * np.pi * real_iter) / (16 * real_max_iter))
+        return ratio
+
+    def get_warmup_ratio(self):
+        assert self.warmup in ('linear', 'exp')
+        alpha = self.last_epoch / self.warmup_iter
+        if self.warmup == 'linear':
+            ratio = self.warmup_ratio + (1 - self.warmup_ratio) * alpha
+        elif self.warmup == 'exp':
+            ratio = self.warmup_ratio ** (1. - alpha)
+        return ratio
