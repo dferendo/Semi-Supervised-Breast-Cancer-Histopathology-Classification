@@ -13,7 +13,7 @@ import numpy as np
 from torchvision import transforms
 from PIL import Image
 import torch
-from randaugment import RandAugment
+from RandAugment import RandAugment
 
 from densenet import DenseNet
 
@@ -60,7 +60,7 @@ def get_transformations(normalization_mean, normalization_var, image_height, ima
     return transformations, transformations_test
 
 
-def get_unlabeled_transformations(normalization_mean, normalization_var, image_height, image_width):
+def get_unlabeled_transformations(normalization_mean, normalization_var, image_height, image_width, m_raug=None, n_raug=None):
     transformations_1 = transforms.Compose([
         transforms.RandomHorizontalFlip(0.5),
         transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
@@ -70,11 +70,14 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
 
     transformations_2 = transforms.Compose([
         transforms.RandomHorizontalFlip(0.5),
-        RandAugment(),
+        RandAugment(n=3, m=10),
         transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
     ])
+
+    if n_raug is not None and m_raug is not None:
+        transformations_2.transforms.insert(1, RandAugment(n=n_raug, m=m_raug))
 
     # transformations_2 = transforms.Compose([
     #     transforms.RandomAffine(translate=(0.1, 0.1), degrees=0),
@@ -99,7 +102,7 @@ normalization_mean, normalization_var = get_image_normalization(args.magnificati
 transformations, transformations_test = get_transformations(normalization_mean, normalization_var, args.image_height,
                                                             args.image_height)
 unlabeled_transformations = get_unlabeled_transformations(normalization_mean, normalization_var, args.image_height,
-                                                          args.image_height)
+                                                          args.image_height, m_raug=args.m_raugm, n_raug=args.n_raug)
 
 data_location = os.path.abspath(args.dataset_location)
 
@@ -110,6 +113,7 @@ data_parameters.magnification = args.magnification
 data_parameters.unlabeled_split = args.unlabelled_split
 data_parameters.labelled_images_amount = args.labelled_images_amount
 data_parameters.unlabeled_transformations = unlabeled_transformations
+data_parameters.unlabelled_factor = args.unlabelled_factor
 
 train_loader, train_unlabeled_loader, val_loader, test_loader = data_providers.get_datasets(data_parameters)
 
@@ -123,7 +127,7 @@ else:
 #(6, 12, 24, 16)
 # (6, 6, 6, 6)
 model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                 growth_rate=12, block_config=(6, 12, 24, 24), compression=0.5,
+                 growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
                  num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
                  num_classes=num_output_classes, small_inputs=False, efficient=False,
                  use_bias=True, use_se=args.use_se, se_reduction=args.se_reduction)
@@ -156,7 +160,7 @@ scheduler_params = {'lr_max': args.learn_rate_max,
                     'erf_alpha': args.erf_sched_alpha,
                     'erf_beta': args.erf_sched_beta}
 
-if not args.use_mix_match:
+if not args.use_mix_match and not args.use_fix_match:
     print('No Mix Match')
     bhc_experiment = ExperimentBuilder(network_model=model,
                                        use_gpu=args.use_gpu,
@@ -170,23 +174,23 @@ if not args.use_mix_match:
                                        optim_params=optimizer_params,
                                        scheduler=args.sched_type,
                                        sched_params=scheduler_params)
-else:
-    # print('Mix Match')
-    # bhc_experiment = ExperimentBuilderMixMatch(network_model=model,
-    #                                            use_gpu=args.use_gpu,
-    #                                            experiment_name=args.experiment_name,
-    #                                            num_epochs=args.num_epochs,
-    #                                            continue_from_epoch=args.continue_from_epoch,
-    #                                            train_data=train_loader,
-    #                                            val_data=val_loader,
-    #                                            test_data=test_loader,
-    #                                            optimiser=args.optim_type,
-    #                                            optim_params=optimizer_params,
-    #                                            scheduler=args.sched_type,
-    #                                            sched_params=scheduler_params,
-    #                                            train_data_unlabeled=train_unlabeled_loader,
-    #                                            lambda_u=args.loss_lambda_u)
-
+elif args.use_mix_match:
+    print('Mix Match')
+    bhc_experiment = ExperimentBuilderMixMatch(network_model=model,
+                                               use_gpu=args.use_gpu,
+                                               experiment_name=args.experiment_name,
+                                               num_epochs=args.num_epochs,
+                                               continue_from_epoch=args.continue_from_epoch,
+                                               train_data=train_loader,
+                                               val_data=val_loader,
+                                               test_data=test_loader,
+                                               optimiser=args.optim_type,
+                                               optim_params=optimizer_params,
+                                               scheduler=args.sched_type,
+                                               sched_params=scheduler_params,
+                                               train_data_unlabeled=train_unlabeled_loader,
+                                               lambda_u=args.loss_lambda_u)
+elif args.use_fix_match:
     print('Fix Match')
     bhc_experiment = ExperimentBuilderFixMatch(network_model=model,
                                                use_gpu=args.use_gpu,
@@ -202,6 +206,6 @@ else:
                                                sched_params=scheduler_params,
                                                train_data_unlabeled=train_unlabeled_loader,
                                                lambda_u=args.loss_lambda_u,
-                                               threshold=0.95)
+                                               threshold=args.fm_conf_threshold)
 
 experiment_metrics, test_metrics = bhc_experiment.run_experiment()

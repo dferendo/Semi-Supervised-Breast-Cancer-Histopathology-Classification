@@ -319,11 +319,13 @@ class ExperimentBuilderFixMatch(nn.Module):
         return current_epoch_losses
 
     def run_testing_epoch(self, current_epoch_losses):
-
+        self.ema.apply_shadow()
+        self.ema.model.eval()
+        self.ema.model.cuda()
         with tqdm.tqdm(total=len(self.test_data), file=sys.stdout) as pbar_test:  # ini a progress bar
             for x, y in self.test_data:  # sample batch
                 # compute loss and accuracy by running an evaluation step
-                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x, y=y)
+                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x, y=y, model=self.ema.model)
 
                 current_epoch_losses["test_loss"].append(loss)  # save test loss
                 current_epoch_losses["test_acc"].append(accuracy)  # save test accuracy
