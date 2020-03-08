@@ -8,6 +8,7 @@ from model_architectures import BHCNetwork
 from experiment_builder import ExperimentBuilder
 from ExperimentBuilderMixMatch import ExperimentBuilderMixMatch
 from ExperimentBuilderFixMatch import ExperimentBuilderFixMatch
+import random
 
 import numpy as np
 from torchvision import transforms
@@ -95,14 +96,21 @@ device = get_processing_device()
 
 # Seeds
 rng = np.random.RandomState(seed=args.seed)
+np.random.seed(args.seed)
+random.seed(args.seed)
+torch.cuda.manual_seed(args.seed)
 torch.manual_seed(seed=args.seed)
+
+# If still random, uncomment
+# torch.backends.cudnn.enabled=False
+# torch.backends.cudnn.deterministic=True
 
 # Data Loading
 normalization_mean, normalization_var = get_image_normalization(args.magnification)
 transformations, transformations_test = get_transformations(normalization_mean, normalization_var, args.image_height,
                                                             args.image_height)
 unlabeled_transformations = get_unlabeled_transformations(normalization_mean, normalization_var, args.image_height,
-                                                          args.image_height, m_raug=args.m_raugm, n_raug=args.n_raug)
+                                                          args.image_height, m_raug=args.m_raug, n_raug=args.n_raug)
 
 data_location = os.path.abspath(args.dataset_location)
 
