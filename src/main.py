@@ -2,9 +2,8 @@ import os
 
 import data_providers as data_providers
 from data_providers import DataParameters
-from arg_extractor import get_shared_arguments
-from util import get_processing_device
-from model_architectures import BHCNetwork
+from Autoencoder.arg_extractor import get_shared_arguments
+from Autoencoder.util import get_processing_device
 from experiment_builder import ExperimentBuilder
 from ExperimentBuilderMixMatch import ExperimentBuilderMixMatch
 

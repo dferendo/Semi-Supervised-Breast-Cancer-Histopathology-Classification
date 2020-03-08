@@ -6,7 +6,7 @@ magnifications=("40X")
 unlabelled_splits=(0)
 dropout_values=(0)
 weight_decay_values=(0.001)
-learning_rate=(0.01)
+learning_rate=(0.1)
 
 for magnification in "${magnifications[@]}"
 do
@@ -25,7 +25,7 @@ do
                 --num_filters 24 \
                 --dataset_location "${DATASET_DIR}" --experiment_name "${experiment_result_location}" \
                 --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient ${weight_decay} \
-                --sched_type "Step" --learn_rate_max ${lr} --drop_rate ${dropout} \
+                --learn_rate_max ${lr} --drop_rate ${dropout} \
                 --magnification "${magnification}" --unlabelled_split ${unlabelled_split} \
                 --use_mix_match "False" --multi_class "False"
           done

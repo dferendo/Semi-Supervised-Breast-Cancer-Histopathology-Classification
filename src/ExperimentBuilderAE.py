@@ -155,7 +155,7 @@ class ExperimentBuilder(nn.Module):
 
         return total_num_params
 
-    def run_train_iter(self, x, y):
+    def run_train_iter(self, image, image_with_noise):
         """
         Receives the inputs and targets for the model and runs a training iteration. Returns loss and accuracy metrics.
         :param x: The inputs to the model. A numpy array of shape batch_size, channels, height, width
@@ -164,21 +164,12 @@ class ExperimentBuilder(nn.Module):
         """
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
 
-        if len(y.shape) > 1:
-            y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
+        image = image.to(self.device)
+        image_with_noise = image_with_noise.to(self.device)
 
-        # print(type(x))
+        out = self.model.forward(image_with_noise)  # forward the data in the model
 
-        if type(x) is np.ndarray:
-            x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
-                device=self.device)  # send data to device as torch tensors
-
-        x = x.to(self.device)
-        y = y.to(self.device)
-
-        out = self.model.forward(x)  # forward the data in the model
-
-        loss = self.criterion(input=out, target=x)  # compute loss
+        loss = self.criterion(input=out, target=image)  # compute loss
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
@@ -235,8 +226,8 @@ class ExperimentBuilder(nn.Module):
 
     def run_training_epoch(self, current_epoch_losses):
         with tqdm.tqdm(total=len(self.train_data), file=sys.stdout) as pbar_train:  # create a progress bar for training
-            for idx, (x, y) in enumerate(self.train_data):  # get data batches
-                loss, accuracy = self.run_train_iter(x=x, y=y)  # take a training iter step
+            for idx, (image, image_with_noise) in enumerate(self.train_data):  # get data batches
+                loss, accuracy = self.run_train_iter(image=image, image_with_noise=image_with_noise)  # take a training iter step
                 current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
                 current_epoch_losses["train_acc"].append(accuracy)  # add current iter acc to the train acc list
                 pbar_train.update(1)
@@ -336,20 +327,4 @@ class ExperimentBuilder(nn.Module):
                             # save model and best val idx and best val acc, using the model dir, model name and model idx
                             model_save_name="train_model", model_idx='latest', state=self.state)
 
-        print("Generating test set evaluation metrics")
-        self.load_model(model_save_dir=self.experiment_saved_models, model_idx=self.best_val_model_idx,
-                        # load best validation model
-                        model_save_name="train_model")
-        current_epoch_losses = {"test_acc": [], "test_loss": [], "test_f1": [], "test_precision": [],
-                                "test_recall": []}  # initialize a statistics dict
-
-        current_epoch_losses = self.run_testing_epoch(current_epoch_losses=current_epoch_losses)
-
-        test_losses = {key: [np.mean(value)] for key, value in
-                       current_epoch_losses.items()}  # save test set metrics in dict format
-
-        save_statistics(experiment_log_dir=self.experiment_logs, filename='test_summary.csv',
-                        # save test set metrics on disk in .csv format
-                        stats_dict=test_losses, current_epoch=0, continue_from_mode=False)
-
-        return total_losses, test_losses
+        return total_losses

@@ -2,47 +2,177 @@ from densenet import DenseNet
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+import math
 
-class DecoderLayer(nn.Module):
-    def __init__(self, input_shape):
-        super(DecoderLayer, self).__init__()
 
+class DecoderTransition(nn.Sequential):
+    def __init__(self, input_shape, use_bias, num_output_filters, last_block):
+        super(DecoderTransition, self).__init__()
+
+        self.num_output_filters = num_output_filters
         self.input_shape = input_shape
+        self.use_bias = use_bias
+        self.last_block = last_block
         self.layer_dict = nn.ModuleDict()
 
+        # build the network
         self.build_module()
 
     def build_module(self):
+        print('Transition Layer shape', self.input_shape)
         x = torch.zeros(self.input_shape)
         out = x
 
-        self.layer_dict['deconv_1'] = nn.ConvTranspose2d(in_channels=out.shape[1],
+        if not self.last_block:
+            self.layer_dict['up1'] = nn.Upsample(scale_factor=2, mode='nearest', align_corners=None)
+            out = self.layer_dict['up1'].forward(out)
+
+        self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
+        out = self.layer_dict['bn_1'].forward(out)
+        out = F.relu(out)
+
+        self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_output_filters,
+                                              kernel_size=3, stride=1, padding = 1, bias=self.use_bias)
+        out = self.layer_dict['conv_1'].forward(out)
+
+        self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
+        out = self.layer_dict['bn_2'].forward(out)
+        out = F.relu(out)
+
+        return out
+
+    def forward(self, inputs):
+        out = inputs
+
+        if not self.last_block:
+            out = self.layer_dict['up1'].forward(out)
+
+        out = self.layer_dict['bn_1'].forward(out)
+        out = F.relu(out)
+
+        out = self.layer_dict['conv_1'].forward(out)
+
+        out = self.layer_dict['bn_2'].forward(out)
+        out = F.relu(out)
+
+        return out
+
+
+class DecoderDenseBlock(nn.Module):
+    def __init__(self, input_shape, use_bias=True):
+        super(DecoderDenseBlock, self).__init__()
+        self.use_bias = use_bias
+        self.input_shape = input_shape
+        self.layer_dict = nn.ModuleDict()
+
+        # build the network
+        self.build_module()
+
+    def build_module(self):
+        # Assuming input shape is the pre-concatenated tensor shape
+        # num_input_features should be dim 1 of the 4d tensor
+        print('Dense Layer shape', self.input_shape)
+        x = torch.zeros(self.input_shape)
+        out = x
+
+        self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=out.shape[1],
-                                              kernel_size=1, stride=1, bias=True)
-        out = self.layer_dict['deconv_1'].forward(out)
+                                              kernel_size=3, stride=1, padding=1, bias=self.use_bias)
+        out = self.layer_dict['conv_1'].forward(out)
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_1'].forward(out)
 
         out = F.relu(out)
 
-        self.layer_dict['deconv_2'] = nn.ConvTranspose2d(in_channels=out.shape[1],
-                                              out_channels=3,
-                                              kernel_size=3, stride=8, padding=1,output_padding=7, bias=True)
-        out = self.layer_dict['deconv_2'].forward(out)
+        self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1],
+                                              out_channels=out.shape[1],
+                                              kernel_size=3, stride=1, padding=1, bias=self.use_bias)
+        out = self.layer_dict['conv_2'].forward(out)
 
-    def forward(self, input):
-        out = input
+        self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
+        out = self.layer_dict['bn_2'].forward(out)
 
-        out = self.layer_dict['deconv_1'].forward(out)
-        out = self.layer_dict['bn_1'].forward(out)
+        out = out + x
 
         out = F.relu(out)
 
-        out = self.layer_dict['deconv_2'].forward(out)
+        return out
+
+    def forward(self, x):
+        # concatenated features
+        out = x
+        out = self.layer_dict['conv_1'].forward(out)
+        out = self.layer_dict['bn_1'].forward(out)
+        out = F.relu(out)
+
+        out = self.layer_dict['conv_2'].forward(out)
+        out = self.layer_dict['bn_2'].forward(out)
+        out = out + x
+        out = F.relu(out)
 
         return out
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
+
+
+class AutoDecoder(nn.Module):
+    def __init__(self, block_config, use_bias, input_shape, growth_rate, compression):
+        super(AutoDecoder, self).__init__()
+        self.block_config = block_config
+        self.use_bias = use_bias
+        self.input_shape = input_shape
+        self.growth_rate = growth_rate
+        self.compression = compression
+
+        self.layer_dict = nn.ModuleDict()
+        self.build_module()
+
+    def build_module(self):
+        out = torch.zeros(self.input_shape)
+
+        self.layer_dict['entry_bn'] = nn.BatchNorm2d(out.shape[1])
+        out = self.layer_dict['entry_bn'].forward(out)
+
+        for i, block_layers in enumerate(self.block_config[::-1]):
+
+            self.layer_dict[f'block_{i}'] = DecoderDenseBlock(input_shape=out.shape, use_bias=self.use_bias)
+            out = self.layer_dict[f'block_{i}'].forward(out)
+
+            self.layer_dict[f't_block_{i}'] = DecoderTransition(input_shape=out.shape, use_bias=self.use_bias,
+                                                                num_output_filters=math.ceil((out.shape[1] * self.compression)),
+                                                                last_block=i == len(self.block_config) - 1)
+            out = self.layer_dict[f't_block_{i}'].forward(out)
+
+        return out
+
+    def forward(self, input):
+        out = input
+        out = self.layer_dict['entry_bn'].forward(out)
+
+        for i, block_layers in enumerate(self.block_config[::-1]):
+            out = self.layer_dict[f'block_{i}'].forward(out)
+            out = self.layer_dict[f't_block_{i}'].forward(out)
+
+        return out
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
 
 
 class Autoencoder(nn.Module):
@@ -53,7 +183,6 @@ class Autoencoder(nn.Module):
         self.layer_dict = nn.ModuleDict()
 
         self.build_module()
-
 
     def build_module(self):
         x = torch.zeros(self.densenetParameters.input_shape)
@@ -72,34 +201,43 @@ class Autoencoder(nn.Module):
 
         out = self.layer_dict['encoder'].forward(out)
 
-        self.layer_dict['dtest'] = DecoderLayer(out.shape)
-        out = self.layer_dict['dtest'].forward(out)
-        print(out.shape)
-        self.layer_dict['deconv_out'] = nn.ConvTranspose2d(out.shape[1], 3, kernel_size=7,
-                                              stride=4, dilation=1,padding=3, output_padding=3, bias=True)
-        out = self.layer_dict['deconv_out'].forward(out)
-        print(out.shape)
+        self.layer_dict['decoder'] = AutoDecoder(block_config=self.densenetParameters.block_config,
+                                                 use_bias=self.densenetParameters.use_bias,
+                                                 input_shape=out.shape,
+                                                 growth_rate=self.densenetParameters.growth_rate,
+                                                 compression=self.densenetParameters.compression)
 
-        # out = torch.flatten(out, 1)
+        out = self.layer_dict['decoder'].forward(out)
 
-        # out = self.layer_dict['final_classifier'].forward(out)
-        # out = out.view(self.densenetParameters.input_shape)
-        #bottleneck?
-        # out = F.relu(out)
-        # out = F.adaptive_avg_pool2d(out, (12, 12
+        self.layer_dict['conv_final_a'] = nn.ConvTranspose2d(out.shape[1], out_channels=3, kernel_size=7,
+                                              stride=4, padding=3, output_padding=3, bias=self.densenetParameters.use_bias)
 
-        print(out.shape)
+        out = self.layer_dict['conv_final_a'].forward(out)
+
+        self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
+        out = self.layer_dict['bn_1'].forward(out)
+
+        self.layer_dict['conv_final_b'] = nn.ConvTranspose2d(out.shape[1],out_channels=3, kernel_size=7,
+                                              stride=1, padding=3, bias=self.densenetParameters.use_bias)
+
+        out = self.layer_dict['conv_final_b'].forward(out)
+
+        self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
+        out = self.layer_dict['bn_2'].forward(out)
+
+        return out
 
     def forward(self, x):
         out = x
         out = self.layer_dict['encoder'].forward(out)
-        out = self.layer_dict['dtest'].forward(out)
+        out = self.layer_dict['decoder'].forward(out)
 
-        out = self.layer_dict['deconv_out'].forward(out)
+        out = self.layer_dict['conv_final_a'].forward(out)
+        out = self.layer_dict['conv_final_b'].forward(out)
 
-        # out = torch.flatten(out, 1)
-        # out = self.layer_dict['final_classifier'].forward(out)
-        # out = out.view(self.densenetParameters.input_shape)
+        out = self.layer_dict['bn_1'].forward(out)
+        out = self.layer_dict['bn_2'].forward(out)
+
         return out
 
     def reset_parameters(self):
@@ -111,5 +249,3 @@ class Autoencoder(nn.Module):
                 item.reset_parameters()
             except:
                 pass
-
-
