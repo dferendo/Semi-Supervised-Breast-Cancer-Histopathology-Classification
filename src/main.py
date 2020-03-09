@@ -71,7 +71,6 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
 
     transformations_2 = transforms.Compose([
         transforms.RandomHorizontalFlip(0.5),
-        RandAugment(n=3, m=10),
         transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(normalization_mean, normalization_var)
@@ -94,16 +93,17 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
 args = get_shared_arguments()
 device = get_processing_device()
 
-# Seeds
-rng = np.random.RandomState(seed=args.seed)
-np.random.seed(args.seed)
-random.seed(args.seed)
+# Seeds)
+os.environ['PYTHONHASHSEED'] = str(args.seed)
+torch.manual_seed(args.seed)
 torch.cuda.manual_seed(args.seed)
-torch.manual_seed(seed=args.seed)
+torch.cuda.manual_seed_all(args.seed)  # if you are using multi-GPU.
+np.random.seed(args.seed)  # Numpy module.
+random.seed(args.seed)  # Python random module.
+torch.manual_seed(args.seed)
+# torch.backends.cudnn.benchmark = False
+# torch.backends.cudnn.deterministic = True
 
-# If still random, uncomment
-# torch.backends.cudnn.enabled=False
-# torch.backends.cudnn.deterministic=True
 
 # Data Loading
 normalization_mean, normalization_var = get_image_normalization(args.magnification)
@@ -122,6 +122,7 @@ data_parameters.unlabeled_split = args.unlabelled_split
 data_parameters.labelled_images_amount = args.labelled_images_amount
 data_parameters.unlabeled_transformations = unlabeled_transformations
 data_parameters.unlabelled_factor = args.unlabelled_factor
+data_parameters.seed = args.seed
 
 train_loader, train_unlabeled_loader, val_loader, test_loader = data_providers.get_datasets(data_parameters)
 
