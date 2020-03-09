@@ -93,7 +93,7 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
 args = get_shared_arguments()
 device = get_processing_device()
 
-# Seeds)
+# Seeds
 os.environ['PYTHONHASHSEED'] = str(args.seed)
 torch.manual_seed(args.seed)
 torch.cuda.manual_seed(args.seed)
