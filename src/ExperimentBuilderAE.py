@@ -17,6 +17,7 @@ from ERF_Scheduler import ERF
 
 from storage_utils import save_statistics
 from sklearn.metrics import f1_score, precision_score, recall_score
+import math
 
 
 class ExperimentBuilder(nn.Module):
@@ -114,6 +115,7 @@ class ExperimentBuilder(nn.Module):
         # Set best models to be at 0 since we are just starting
         self.best_val_model_idx = 0
         self.best_val_model_acc = 0.
+        self.best_train_loss = math.inf
 
         if not os.path.exists(self.experiment_folder):  # If experiment directory does not exist
             os.mkdir(self.experiment_folder)  # create the experiment directory
@@ -290,6 +292,7 @@ class ExperimentBuilder(nn.Module):
         total_losses = {"train_acc": [], "train_loss": [], "val_acc": [],
                         "val_loss": [], "val_f1": [], "val_precision": [], "val_recall": [],
                         "curr_epoch": []}  # initialize a dict to keep the per-epoch metrics
+
         for i, epoch_idx in enumerate(range(self.starting_epoch, self.num_epochs)):
             epoch_start_time = time.time()
             current_epoch_losses = {"train_acc": [], "train_loss": [], "val_acc": [], "val_loss": [],
@@ -299,6 +302,15 @@ class ExperimentBuilder(nn.Module):
 
             if self.scheduler is not None:
                 self.scheduler.step()
+
+            train_loss_average = np.mean(current_epoch_losses['train_loss'])
+
+            if train_loss_average < self.best_train_loss:
+                print(f'Saving Best Model')
+                self.best_train_loss = train_loss_average
+                self.save_model(model_save_dir=self.experiment_saved_models,
+                                # save model and best val idx and best val acc, using the model dir, model name and model idx
+                                model_save_name="train_model", model_idx='best', state=self.state)
 
             for key, value in current_epoch_losses.items():
                 total_losses[key].append(np.mean(value))
@@ -320,11 +332,6 @@ class ExperimentBuilder(nn.Module):
             epoch_elapsed_time = "{:.4f}".format(epoch_elapsed_time)
             print("Epoch {}:".format(epoch_idx), out_string, "epoch time", epoch_elapsed_time, "seconds")
             self.state['current_epoch_idx'] = epoch_idx
-            self.save_model(model_save_dir=self.experiment_saved_models,
-                            # save model and best val idx and best val acc, using the model dir, model name and model idx
-                            model_save_name="train_model", model_idx=epoch_idx, state=self.state)
-            self.save_model(model_save_dir=self.experiment_saved_models,
-                            # save model and best val idx and best val acc, using the model dir, model name and model idx
-                            model_save_name="train_model", model_idx='latest', state=self.state)
+
 
         return total_losses

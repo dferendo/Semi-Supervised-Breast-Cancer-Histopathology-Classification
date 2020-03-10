@@ -57,10 +57,20 @@ class DecoderTransition(nn.Sequential):
 
         return out
 
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
 
-class DecoderDenseBlock(nn.Module):
+
+class DecoderLayer(nn.Module):
     def __init__(self, input_shape, use_bias=True):
-        super(DecoderDenseBlock, self).__init__()
+        super(DecoderLayer, self).__init__()
         self.use_bias = use_bias
         self.input_shape = input_shape
         self.layer_dict = nn.ModuleDict()
@@ -124,14 +134,58 @@ class DecoderDenseBlock(nn.Module):
                 pass
 
 
+class DecoderDenseBlock(nn.Module):
+    def __init__(self, input_shape, number_of_layers=3, use_bias=True):
+        super(DecoderDenseBlock, self).__init__()
+        self.use_bias = use_bias
+        self.input_shape = input_shape
+        self.number_of_layers = number_of_layers
+        self.layer_dict = nn.ModuleDict()
+
+        # build the network
+        self.build_module()
+
+    def build_module(self):
+        # Assuming input shape is the pre-concatenated tensor shape
+        # num_input_features should be dim 1 of the 4d tensor
+        print('Dense Block shape', self.input_shape)
+        x = torch.zeros(self.input_shape)
+        out = x
+
+        for layer in range(0, self.number_of_layers):
+            self.layer_dict[f'res_block_{layer}'] = DecoderLayer(self.input_shape, self.use_bias)
+            out = self.layer_dict[f'res_block_{layer}'].forward(out)
+
+        return out
+
+    def forward(self, x):
+        out = x
+
+        for layer in range(0, self.number_of_layers):
+            out = self.layer_dict[f'res_block_{layer}'].forward(out)
+
+        return out
+
+    def reset_parameters(self):
+        """
+        Re-initialize the network parameters.
+        """
+        for item in self.layer_dict.children():
+            try:
+                item.reset_parameters()
+            except:
+                pass
+
+
 class AutoDecoder(nn.Module):
-    def __init__(self, block_config, use_bias, input_shape, growth_rate, compression):
+    def __init__(self, block_config, use_bias, input_shape, growth_rate, compression, num_of_layers):
         super(AutoDecoder, self).__init__()
         self.block_config = block_config
         self.use_bias = use_bias
         self.input_shape = input_shape
         self.growth_rate = growth_rate
         self.compression = compression
+        self.num_of_layers = num_of_layers
 
         self.layer_dict = nn.ModuleDict()
         self.build_module()
@@ -144,7 +198,8 @@ class AutoDecoder(nn.Module):
 
         for i, block_layers in enumerate(self.block_config[::-1]):
 
-            self.layer_dict[f'block_{i}'] = DecoderDenseBlock(input_shape=out.shape, use_bias=self.use_bias)
+            self.layer_dict[f'block_{i}'] = DecoderDenseBlock(input_shape=out.shape, number_of_layers=self.num_of_layers,
+                                                              use_bias=self.use_bias)
             out = self.layer_dict[f'block_{i}'].forward(out)
 
             self.layer_dict[f't_block_{i}'] = DecoderTransition(input_shape=out.shape, use_bias=self.use_bias,
@@ -205,7 +260,8 @@ class Autoencoder(nn.Module):
                                                  use_bias=self.densenetParameters.use_bias,
                                                  input_shape=out.shape,
                                                  growth_rate=self.densenetParameters.growth_rate,
-                                                 compression=self.densenetParameters.compression)
+                                                 compression=self.densenetParameters.compression,
+                                                 num_of_layers=2)
 
         out = self.layer_dict['decoder'].forward(out)
 
