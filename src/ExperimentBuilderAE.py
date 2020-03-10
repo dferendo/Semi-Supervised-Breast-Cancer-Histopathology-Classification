@@ -333,5 +333,4 @@ class ExperimentBuilder(nn.Module):
             print("Epoch {}:".format(epoch_idx), out_string, "epoch time", epoch_elapsed_time, "seconds")
             self.state['current_epoch_idx'] = epoch_idx
 
-
         return total_losses

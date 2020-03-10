@@ -98,6 +98,9 @@ def get_shared_arguments():
                         help='Factor of batch size of unlabelled data')
     parser.add_argument('--fm_conf_threshold', nargs="?", type=float, default=0.95,
                         help='The fixmatch threshold')
+    parser.add_argument('--pretrained_weights_locations', nargs="?", type=str, default=None,
+                        help='Pre-trained weights locations for Densenet')
+
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
 

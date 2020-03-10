@@ -20,9 +20,9 @@ do
         do
           experiment_result_location="./experiments/autoencoder_test_${magnification}_${unlabelled_split}"
 
-          python ../../src/RunAutoencoder.py --use_gpu "True" --batch_size 20 --num_epochs 100 --continue_from_epoch -1 --seed 0 \
+          python ../../src/RunAutoencoder.py --use_gpu "True" --batch_size 20 --num_epochs 5 --continue_from_epoch -1 --seed 0 \
                 --image_num_channels 3 --image_height 224 --image_width 224 \
-                --num_filters 24 \
+                --num_filters 64 \
                 --dataset_location "${DATASET_DIR}" --experiment_name "${experiment_result_location}" \
                 --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient ${weight_decay} \
                 --learn_rate_max ${lr} --drop_rate ${dropout} \

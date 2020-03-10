@@ -396,6 +396,11 @@ class DenseNet(nn.Module):
 
         self.build_module()
 
+        with open("state_densenet.txt", "w") as text_file:
+            for x in self.state_dict():
+                text_file.write(x + '\n')
+
+
     def build_module(self):
         x = torch.zeros(self.input_shape)
         out = x

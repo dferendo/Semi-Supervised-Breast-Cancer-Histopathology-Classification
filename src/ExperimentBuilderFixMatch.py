@@ -23,7 +23,7 @@ class ExperimentBuilderFixMatch(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data, train_data_unlabeled,
                  test_data, use_gpu, continue_from_epoch=-1,
                  scheduler=None, optimiser=None, sched_params=None, optim_params=None,
-                 threshold=None, lambda_u=None):
+                 threshold=None, lambda_u=None, pretrained_weights_locations=None):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -136,10 +136,16 @@ class ExperimentBuilderFixMatch(nn.Module):
         if not os.path.exists(self.experiment_saved_models):
             os.mkdir(self.experiment_saved_models)  # create the experiment saved models directory
 
+        if pretrained_weights_locations is not None:
+            self.load_pre_trained_model(model_save_dir=pretrained_weights_locations,
+                                        model_save_name="train_model",
+                                        model_idx='best')
+
         self.num_epochs = num_epochs
         # self.criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
         self.labelled_criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
         self.unlabelled_criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
+
         if continue_from_epoch == -2:
             try:
                 self.best_val_model_idx, self.best_val_model_acc, self.state = self.load_model(
@@ -349,6 +355,25 @@ class ExperimentBuilderFixMatch(nn.Module):
         state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))
         self.load_state_dict(state_dict=state['network'])
         return state['best_val_model_idx'], state['best_val_model_acc'], state
+
+    def load_pre_trained_model(self, model_save_dir, model_save_name, model_idx):
+        state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))
+        new_dict = {}
+
+        for key in self.state_dict().keys():
+            temp_key = key.replace('model.', '')
+            temp_key = f'model.layer_dict.encoder.{temp_key}'
+
+            if temp_key in state['network']:
+                new_dict[key] = state['network'][temp_key]
+            else:
+                new_dict[key] = self.state_dict()[key]
+
+        print(self.state_dict()['model.layer_dict.denseblock_1.layer_dict.dense_se_layer_4.layer_dict.bn_1.weight'])
+
+        self.load_state_dict(state_dict=new_dict)
+
+        print(self.state_dict()['model.layer_dict.denseblock_1.layer_dict.dense_se_layer_4.layer_dict.bn_1.weight'])
 
     def run_experiment(self):
         """

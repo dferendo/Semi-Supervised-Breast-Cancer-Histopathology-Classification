@@ -43,7 +43,8 @@ do
                         --sched_type "FixMatchCos" --learn_rate_max ${learning_rate} --drop_rate ${dropout} \
                         --magnification "${magnification}" --use_mix_match "False" --multi_class "False" \
                         --labelled_images_amount ${labeled_images} --loss_lambda_u ${loss_lambda_u} --use_se "True" \
-                        --use_fix_match "True" --n_raug 3 --m_raug 10 --unlabelled_factor 1 --fm_conf_threshold 0.95
+                        --use_fix_match "True" --n_raug 3 --m_raug 10 --unlabelled_factor 1 --fm_conf_threshold 0.95 \
+                        --pretrained_weights_locations "../Autoencoder/experiments/autoencoder_test_40X_0/saved_models"
         done
       done
     done

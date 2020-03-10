@@ -110,4 +110,4 @@ bhc_experiment = ExperimentBuilder(network_model=model,
                                    scheduler=args.sched_type,
                                    sched_params=scheduler_params)
 
-experiment_metrics, test_metrics = bhc_experiment.run_experiment()
+experiment_metrics = bhc_experiment.run_experiment()

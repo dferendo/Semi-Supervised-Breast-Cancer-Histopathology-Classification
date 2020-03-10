@@ -1,9 +1,9 @@
 
 
 class DenseNetParameters(object):
-    growth_rate = 12
+    growth_rate = 32
     bottleneck_factor = 4
-    block_config = (6, 12, 24, 16)  # DenseNet-121
+    block_config = (4, 4, 4, 4)  # DenseNet-121
     drop_rate = 0.
     use_bias = True
     compression = 0.5

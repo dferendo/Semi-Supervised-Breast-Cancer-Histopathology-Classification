@@ -2,8 +2,8 @@ import os
 
 import data_providers as data_providers
 from data_providers import DataParameters
-from Autoencoder.arg_extractor import get_shared_arguments
-from Autoencoder.util import get_processing_device
+from arg_extractor import get_shared_arguments
+from util import get_processing_device
 from experiment_builder import ExperimentBuilder
 from ExperimentBuilderMixMatch import ExperimentBuilderMixMatch
 from ExperimentBuilderFixMatch import ExperimentBuilderFixMatch
@@ -101,8 +101,6 @@ torch.cuda.manual_seed_all(args.seed)  # if you are using multi-GPU.
 np.random.seed(args.seed)  # Numpy module.
 random.seed(args.seed)  # Python random module.
 torch.manual_seed(args.seed)
-# torch.backends.cudnn.benchmark = False
-# torch.backends.cudnn.deterministic = True
 
 
 # Data Loading
@@ -215,6 +213,7 @@ elif args.use_fix_match:
                                                sched_params=scheduler_params,
                                                train_data_unlabeled=train_unlabeled_loader,
                                                lambda_u=args.loss_lambda_u,
-                                               threshold=args.fm_conf_threshold)
+                                               threshold=args.fm_conf_threshold,
+                                               pretrained_weights_locations=args.pretrained_weights_locations)
 
 experiment_metrics, test_metrics = bhc_experiment.run_experiment()

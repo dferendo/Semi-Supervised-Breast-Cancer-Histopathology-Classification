@@ -32,7 +32,7 @@ class DecoderTransition(nn.Sequential):
         out = F.relu(out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_output_filters,
-                                              kernel_size=3, stride=1, padding = 1, bias=self.use_bias)
+                                              kernel_size=3, stride=1, padding=1, bias=self.use_bias)
         out = self.layer_dict['conv_1'].forward(out)
 
         self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
@@ -252,6 +252,8 @@ class Autoencoder(nn.Module):
                                               drop_rate=self.densenetParameters.drop_rate,
                                               num_classes=self.densenetParameters.num_classes,
                                               no_classification=True,
+                                              use_se=True,
+                                              increasing_dilation=True,
                                               small_inputs=False)
 
         out = self.layer_dict['encoder'].forward(out)
