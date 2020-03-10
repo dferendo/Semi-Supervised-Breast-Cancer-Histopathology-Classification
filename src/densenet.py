@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from collections import OrderedDict
+from cbam import CBAM
 
 # TODO: Delete if we do not use memory efficient version
 def _bn_function_factory(norm, relu, conv):
@@ -134,10 +135,11 @@ class DenseSeLayer(nn.Module):
         print('Dense Layer shape', self.input_shape)
         x = torch.zeros(self.input_shape)
         out = x
-
-        self.layer_dict['se'] = SqueezeExciteLayer(input_shape=out.shape,
-                                                   reduction=self.se_reduction,
-                                                   use_bias=False)
+        #
+        # self.layer_dict['se'] = SqueezeExciteLayer(input_shape=out.shape,
+        #                                            reduction=self.se_reduction,
+        #                                            use_bias=False)
+        self.layer_dict['se'] = CBAM(out.shape[1], self.se_reduction)
         out = self.layer_dict['se'].forward(out)
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
