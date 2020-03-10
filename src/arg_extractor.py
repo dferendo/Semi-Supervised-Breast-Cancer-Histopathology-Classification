@@ -78,6 +78,8 @@ def get_shared_arguments():
                         help='The amount of labelled images per subclass in the training set')
     parser.add_argument('--use_mix_match', nargs="?", type=str2bool, default=False,
                         help='Whether to use MixMatch or not')
+    parser.add_argument('--use_fix_match', nargs="?", type=str2bool, default=False,
+                        help='Whether to use FixMatch or not')
     parser.add_argument('--multi_class', nargs="?", type=str2bool, default=False,
                         help='Whether to use Multi class or Binary class')
     parser.add_argument('--drop_rate', nargs="?", type=float, default=0.2,
@@ -86,8 +88,16 @@ def get_shared_arguments():
                         help='Whether to include Squeeze Excite')
     parser.add_argument('--se_reduction', nargs="?", type=int, default=16,
                         help='Squeeze Excitation reduction')
-    parser.add_argument('--loss_lambda_u', nargs="?", type=int, default=75,
+    parser.add_argument('--loss_lambda_u', nargs="?", type=int, default=1,
                         help='Mixmatch lambda_u unlabelled loss')
+    parser.add_argument('--n_raug', nargs="?", type=int, default=None,
+                        help='N randaugment parameter')
+    parser.add_argument('--m_raug', nargs="?", type=int, default=None,
+                        help='M randaugment parameter')
+    parser.add_argument('--unlabelled_factor', nargs="?", type=int, default=1,
+                        help='Factor of batch size of unlabelled data')
+    parser.add_argument('--fm_conf_threshold', nargs="?", type=float, default=0.95,
+                        help='The fixmatch threshold')
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
 

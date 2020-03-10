@@ -10,6 +10,7 @@ class BreaKHisDataset(Dataset):
     """
     Reading the BreaKHis Dataset. Please keep the original dataset structure
     """
+
     def __init__(self, df, transform=None):
         self.transform = transform
         self.df = df
@@ -39,6 +40,7 @@ class BreaKHisDatasetMultiClass(Dataset):
     """
     Reading the BreaKHis Dataset. Please keep the original dataset structure
     """
+
     def __init__(self, df, transform=None):
         self.transform = transform
         self.df = df
@@ -80,6 +82,7 @@ class BreaKHisDatasetUnlabelled(Dataset):
     """
     Reading the BreaKHis Dataset. Please keep the original dataset structure
     """
+
     def __init__(self, df, transform=None):
         self.transform = transform
         self.df = df
@@ -252,6 +255,9 @@ def split_dataset_into_sets(data_parameters, dataset):
 
 
 def get_datasets(data_parameters):
+    def _init_fn(worker_id):
+        np.random.seed(int(data_parameters.seed))
+
     dataset = get_all_images_location_with_classes(data_parameters.data_root)
     df_train_labeled, df_train_unlabeled, df_val, df_test = split_dataset_into_sets(data_parameters, dataset)
 
@@ -265,18 +271,24 @@ def get_datasets(data_parameters):
         test_dataset = BreaKHisDataset(df_test, data_parameters.transformations_test)
 
     train_loader = DataLoader(train_dataset, batch_size=data_parameters.batch_size, shuffle=True,
-                              num_workers=data_parameters.num_workers, drop_last=True)
+                              num_workers=data_parameters.num_workers, drop_last=True,
+                              worker_init_fn=_init_fn)
 
     val_loader = DataLoader(val_dataset, batch_size=data_parameters.batch_size, shuffle=True,
-                            num_workers=data_parameters.num_workers, drop_last=True)
+                            num_workers=data_parameters.num_workers, drop_last=True,
+                            worker_init_fn=_init_fn)
 
     test_loader = DataLoader(test_dataset, batch_size=data_parameters.batch_size, shuffle=True,
-                             num_workers=data_parameters.num_workers, drop_last=True)
+                             num_workers=data_parameters.num_workers, drop_last=True,
+                             worker_init_fn=_init_fn)
 
-    if (data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.) or data_parameters.labelled_images_amount is not None:
-        unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled, data_parameters.unlabeled_transformations)
+    if (
+            data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.) or data_parameters.labelled_images_amount is not None:
+        unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled,
+                                                             data_parameters.unlabeled_transformations)
 
-        train_unlabeled_loader = DataLoader(unlabelled_train_dataset, batch_size=data_parameters.batch_size,
+        train_unlabeled_loader = DataLoader(unlabelled_train_dataset,
+                                            batch_size=data_parameters.batch_size * data_parameters.unlabelled_factor,
                                             shuffle=True, num_workers=data_parameters.num_workers, drop_last=True)
     else:
         train_unlabeled_loader = None

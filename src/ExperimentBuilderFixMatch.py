@@ -1,5 +1,4 @@
 import sys
-from copy import deepcopy
 
 import torch
 import torch.nn as nn
@@ -12,79 +11,19 @@ import time
 from torch.optim import SGD
 
 from torch.optim.adam import Adam
-from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import MultiStepLR, _LRScheduler
 
 from ERF_Scheduler import ERF
 
 from storage_utils import save_statistics
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 
-class WeightEMA(object):
-    def __init__(self, model, ema_model, lr, alpha=0.999):
-        self.model = model
-        self.ema_model = ema_model
-        self.alpha = alpha
-        self.wd = 0.02 * lr
-
-    def step(self, model, ema_model):
-        one_minus_alpha = 1.0 - self.alpha
-        for name, param in ema_model.named_parameters():
-            param.data = (self.alpha * param.data) + (model.state_dict()[name].data * one_minus_alpha)
-            # self.params[index] = param.mul(1 - self.wd)
-        return ema_model
-
-
-class SemiLoss(object):
-    def __call__(self, outputs_x, targets_x, outputs_u, targets_u):
-        probs_u = torch.softmax(outputs_u, dim=1)
-
-        Lx = -torch.mean(torch.sum(F.log_softmax(outputs_x, dim=1) * targets_x, dim=1))
-        Lu = torch.mean((probs_u - targets_u) ** 2)
-
-        return Lx, Lu
-
-
-def create_ema_model(model):
-    model_out = deepcopy(model)
-
-    for param in model_out.parameters():
-        param.detach_()
-
-    return model_out
-
-
-def linear_rampup(current, rampup_length):
-    if rampup_length == 0:
-        return 1.0
-    else:
-        current = np.clip(current / rampup_length, 0.0, 1.0)
-        return float(current)
-
-
-def interleave_offsets(batch, nu):
-    groups = [batch // (nu + 1)] * (nu + 1)
-    for x in range(batch - sum(groups)):
-        groups[-x - 1] += 1
-    offsets = [0]
-    for g in groups:
-        offsets.append(offsets[-1] + g)
-    assert offsets[-1] == batch
-    return offsets
-
-
-def interleave(xy, batch):
-    nu = len(xy) - 1
-    offsets = interleave_offsets(batch, nu)
-    xy = [[v[offsets[p]:offsets[p + 1]] for p in range(nu + 1)] for v in xy]
-    for i in range(1, nu + 1):
-        xy[0][i], xy[i][i] = xy[i][i], xy[0][i]
-    return [torch.cat(v, dim=0) for v in xy]
-
-
-class ExperimentBuilderMixMatch(nn.Module):
-    def __init__(self, network_model, experiment_name, num_epochs, train_data, train_data_unlabeled, val_data,
-                 test_data, use_gpu, continue_from_epoch=-1, scheduler=None, optimiser=None, sched_params=None,
-                 optim_params=None, lambda_u=100, sharpen_temp=0.5, mixup_alpha=0.75):
+class ExperimentBuilderFixMatch(nn.Module):
+    def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data, train_data_unlabeled,
+                 test_data, use_gpu, continue_from_epoch=-1,
+                 scheduler=None, optimiser=None, sched_params=None, optim_params=None,
+                 threshold=None, lambda_u=None):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -98,40 +37,38 @@ class ExperimentBuilderMixMatch(nn.Module):
         :param use_gpu: A boolean indicating whether to use a GPU or not.
         :param continue_from_epoch: An int indicating whether we'll start from scrach (-1) or whether we'll reload a previously saved model of epoch 'continue_from_epoch' and continue training from there.
         """
-        super(ExperimentBuilderMixMatch, self).__init__()
+        super(ExperimentBuilderFixMatch, self).__init__()
 
         self.experiment_name = experiment_name
         self.model = network_model
-        self.model.reset_parameters()
-        # self.ema_model = create_ema_model(self.model)
+        # self.model.reset_parameters()
         self.device = torch.cuda.current_device()
 
         if torch.cuda.device_count() > 1 and use_gpu:
             self.device = torch.cuda.current_device()
             self.model.to(self.device)
-            # self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
             self.model = nn.DataParallel(module=self.model)
-            # self.ema_model = nn.DataParallel(module=self.ema_model)
             print('Use Multi GPU', self.device)
         elif torch.cuda.device_count() == 1 and use_gpu:
             self.device = torch.cuda.current_device()
             self.model.to(self.device)  # sends the model from the cpu to the gpu
-            # self.ema_model.to(self.device)  # sends the model from the cpu to the gpu
             print('Use GPU', self.device)
         else:
             print("use CPU")
             self.device = torch.device('cpu')  # sets the device to be CPU
             print(self.device)
 
+        self.ema = EMA(model=self.model, alpha=0.999)
+
         # re-initialize network parameters
         self.train_data = train_data
-        self.train_data_unlabeled = train_data_unlabeled
-        self.temp = train_data_unlabeled
         self.val_data = val_data
         self.test_data = test_data
-        self.sharpen_temp = sharpen_temp
-        self.mixup_alpha = mixup_alpha
+        self.train_data_unlabeled = train_data_unlabeled
+        self.temp = train_data_unlabeled
+
         self.loss_lambda_u = lambda_u
+        self.threshold = threshold
 
         if optimiser is None or optimiser == 'Adam':
             self.optimizer = Adam(self.parameters(), amsgrad=False,
@@ -144,8 +81,7 @@ class ExperimentBuilderMixMatch(nn.Module):
                                  nesterov=optim_params['nesterov'],
                                  weight_decay=optim_params['weight_decay'])
 
-        # self.ema_optimiser = WeightEMA(ema_model=self.ema_model, model=self.model, lr=sched_params['lr_max'])
-
+        self.scheduler_type = scheduler
         if scheduler == 'ERF':
             self.scheduler = ERF(self.optimizer,
                                  min_lr=sched_params['lr_min'],
@@ -154,18 +90,17 @@ class ExperimentBuilderMixMatch(nn.Module):
                                  epochs=num_epochs)
         elif scheduler == 'Step':
             self.scheduler = MultiStepLR(self.optimizer,
-                                         milestones=[30, 60, 90, 150],
+                                         milestones=[30, 60],
                                          gamma=0.1)
         elif scheduler == 'Cos':
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
                                                                   T_max=num_epochs,
                                                                   eta_min=0.00001)
-        elif scheduler == 'CosWR':
-            self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(self.optimizer,
-                                                                            T_0=15,
-                                                                            eta_min=0.00001)
+        elif scheduler == 'FixMatchCos':
+            self.scheduler = WarmupCosineLrScheduler(self.optimizer, max_iter=num_epochs*len(train_data), warmup_iter=0)
         else:
             self.scheduler = None
+            self.scheduler_type = None
 
         print('System learnable parameters')
         num_conv_layers = 0
@@ -202,12 +137,9 @@ class ExperimentBuilderMixMatch(nn.Module):
             os.mkdir(self.experiment_saved_models)  # create the experiment saved models directory
 
         self.num_epochs = num_epochs
-
-        # self.unlabeled_train_criterion = SemiLoss(self.unlabeled_train_criterion)
-        # self.unlabeled_train_criterion = nn.MSELoss().to(self.device, non_blocking=True)
-        # self.criterion = nn.CrossEntropyLoss().to(self.device, non_blocking=True)  # send the loss computation to the GPU
-        self.criterion = SemiLoss()
-
+        # self.criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
+        self.labelled_criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
+        self.unlabelled_criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
         if continue_from_epoch == -2:
             try:
                 self.best_val_model_idx, self.best_val_model_acc, self.state = self.load_model(
@@ -237,57 +169,16 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         return total_num_params
 
-    def sharpen(self, p, T):
-        pt = p ** (1 / T)
-        targets_u = pt / pt.sum(dim=1, keepdim=True)
-        return targets_u
-
-    def mixup(self, x, y, u_list, q):
-        '''Returns mixed inputs, pairs of targets, and lambda'''
-        # mixup
-        all_inputs = [x]
-        all_inputs.extend(u_list)
-        all_inputs = torch.cat(all_inputs, dim=0)
-
-        all_targets = [y]
-        all_targets.extend([q for i in range(len(u_list))])
-        all_targets = torch.cat(all_targets, dim=0)
-
-        l = np.random.beta(self.mixup_alpha, self.mixup_alpha, size=all_inputs.shape[0])
-        l = np.maximum(l, 1 - l)
-        l = torch.from_numpy(l).float().to(self.device)
-
-        idx = torch.randperm(all_inputs.size(0))
-
-        input_a, input_b = all_inputs, all_inputs[idx]
-        target_a, target_b = all_targets, all_targets[idx]
-
-        l_t = l.view((l.shape[0], 1))
-        mixed_target = l_t * target_a + (1 - l_t) * target_b
-
-        l_i = l.view((l.shape[0], 1, 1, 1))
-        mixed_input = l_i * input_a + (1 - l_i) * input_b
-
-        return mixed_input, mixed_target
-
-    def mixmatch(self, x, y, u_list):
+    def guess_labels(self, u, threshold):
         with torch.no_grad():
-            # Forward Propagate u_i for all augmentations k
-            q_bar = torch.zeros((u_list[0].shape[0], y.shape[1])).to(self.device)
-            for augmentation in u_list:
-                q_k = torch.softmax(self.model.forward(augmentation), dim=1)
-                q_bar += q_k
-            q_bar = q_bar / len(u_list)
-            q = self.sharpen(q_bar, self.sharpen_temp)
-            q = q.detach()
+            probs = torch.softmax(self.model.forward(u), dim=1)
+            scores, lbs = torch.max(probs, dim=1)
+            idx = scores > threshold
+            lbs = lbs[idx]
 
-            x = x.to(self.device, non_blocking=True)
-            y = y.to(self.device, non_blocking=True)
-            mixed_input, mixed_target = self.mixup(x, y, u_list, q)
+        return lbs.detach(), idx
 
-            return mixed_input, mixed_target
-
-    def run_train_iter(self, x, u, y, batch_num, batch_total, epoch_num):
+    def run_train_iter(self, x, y, u):
         """
         Receives the inputs and targets for the model and runs a training iteration. Returns loss and accuracy metrics.
         :param x: The inputs to the model. A numpy array of shape batch_size, channels, height, width
@@ -296,60 +187,53 @@ class ExperimentBuilderMixMatch(nn.Module):
         """
         self.train()  # sets model to training mode (in case batch normalization or other methods have different procedures for training and evaluation)
 
-        # if len(y.shape) > 1:
-        #     y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
+        if len(y.shape) > 1:
+            y = np.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
 
-        for i in range(len(u)):
-            u[i] = u[i].to(self.device, non_blocking=True)
+        # print(type(x))
 
         if type(x) is np.ndarray:
             x, y = torch.Tensor(x).float().to(device=self.device), torch.Tensor(y).long().to(
                 device=self.device)  # send data to device as torch tensors
 
-        batch_size = x.shape[0]
+        u_weak = u[0]
+        u_strong = u[1]
+        u_weak = u_weak.to(self.device, non_blocking=True)
+        u_strong = u_strong.to(self.device, non_blocking=True)
 
-        # Apply Mixmatch
-        # x and y have same shapes as before
-        # u and q have shape batch*k x dims
-        mixed_input, mixed_target = self.mixmatch(x, y, u)
-        y = mixed_target[:batch_size]
-        q = mixed_target[batch_size:]
+        u_guessed_labels, valid_idx = self.guess_labels(u_weak, self.threshold)
+        u_guessed_labels = u_guessed_labels.to(self.device, non_blocking=True)
 
-        # Interleave is simply forming batches of items that come from both labeled and unlabeled batches.
-        # Since we only update batch norm for the first batch,
-        # it's important that this batch is representative of the whole data.
-        # From https://github.com/google-research/mixmatch/issues/5#issuecomment-506432086 and
-        # https://github.com/YU1ut/MixMatch-pytorch/blob/a738cc95aae88f76761aeeb405201bc7ae200e7d/train.py#L186
-        mixed_input = list(torch.split(mixed_input, batch_size))
-        mixed_input = interleave(mixed_input, batch_size)
+        x = x.to(self.device, non_blocking=True)
+        y = y.to(self.device, non_blocking=True)
 
-        logits = [self.model.forward(mixed_input[0])]
-        for input in mixed_input[1:]:
-            logits.append(self.model.forward(input))
+        if valid_idx.any():
+            u_strong = u_strong[valid_idx]
+            u_strong_out = self.model.forward(u_strong)
+            unlabelled_loss = self.unlabelled_criterion(input=u_strong_out, target=u_guessed_labels)
+        else:
+            unlabelled_loss = torch.tensor(0)
 
-        # put interleaved samples back
-        logits = interleave(logits, batch_size)
-        logits_x = logits[0]
-        logits_u = torch.cat(logits[1:], dim=0)
+        out = self.model.forward(x)  # forward the data in the model
+        labelled_loss = self.labelled_criterion(input=out, target=y)  # compute loss
 
-        rampup = linear_rampup(current=epoch_num + (batch_num / batch_total), rampup_length=self.num_epochs)
-        Lx, Lu = self.criterion(logits_x, y, logits_u, q)
-        loss = Lx + (Lu * (self.loss_lambda_u * rampup))
+        loss = labelled_loss + (self.loss_lambda_u * unlabelled_loss)
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
 
+        self.ema.update_params()
+
         self.optimizer.step()  # update network parameters
-        # self.ema_model = self.ema_optimiser.step(model=self.model, ema_model=self.ema_model)
 
-        if len(y.shape) > 1:
-            y = torch.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
+        if self.scheduler is not None and self.scheduler_type is 'FixMatchCos':
+            self.scheduler.step()
 
-        _, predicted = torch.max(logits_x.data, 1)  # get argmax of predictions
+        _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
         return loss.data.detach().cpu().numpy(), accuracy
 
-    def run_evaluation_iter(self, x, y):
+    def run_evaluation_iter(self, x, y, model):
         """
         Receives the inputs and targets for the model and runs an evaluation iterations. Returns loss and accuracy metrics.
         :param x: The inputs to the model. A numpy array of shape batch_size, channels, height, width
@@ -365,12 +249,19 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         x = x.to(self.device)
         y = y.to(self.device)
-        # out = self.ema_model.forward(x)  # forward the data in the model
-        out = self.model.forward(x)  # forward the data in the model
+        out = model.forward(x)  # forward the data in the model
         loss = F.cross_entropy(out, y)  # compute loss
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
-        return loss.data.detach().cpu().numpy(), accuracy
+
+        y_cpu = y.data.cpu()
+        predicted_cpu = predicted.cpu()
+
+        f1 = f1_score(y_cpu, predicted_cpu, average='macro')
+        precision = precision_score(y_cpu, predicted_cpu, average='macro')
+        recall = recall_score(y_cpu, predicted_cpu, average='macro')
+
+        return loss.data.detach().cpu().numpy(), accuracy, f1, precision, recall
 
     def save_model(self, model_save_dir, model_save_name, model_idx, state):
         """
@@ -387,7 +278,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         torch.save(state, f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(
             model_idx))))  # save state at prespecified filepath
 
-    def run_training_epoch(self, current_epoch_losses, current_epoch):
+    def run_training_epoch(self, current_epoch_losses):
         with tqdm.tqdm(total=len(self.train_data), file=sys.stdout) as pbar_train:  # create a progress bar for training
             for idx, (x, y) in enumerate(self.train_data):  # get data batches
                 try:
@@ -396,44 +287,52 @@ class ExperimentBuilderMixMatch(nn.Module):
                     self.train_data_unlabeled = iter(self.temp)
                     augmented_all = self.train_data_unlabeled.next()
 
-                # take a training iter step
-                loss, accuracy = self.run_train_iter(x=x, u=augmented_all, y=y,
-                                                     batch_num=idx,
-                                                     batch_total=len(self.train_data),
-                                                     epoch_num=current_epoch)
+                loss, accuracy = self.run_train_iter(x=x, y=y, u=augmented_all)  # take a training iter step
                 current_epoch_losses["train_loss"].append(loss)  # add current iter loss to the train loss list
                 current_epoch_losses["train_acc"].append(accuracy)  # add current iter acc to the train acc list
                 pbar_train.update(1)
                 pbar_train.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
 
-                # g=0
-                # for param in self.ema_model.parameters():
-                #     if g==2: break
-                #     print(param.data)
-                #     g+=1
+            self.ema.update_buffer()
 
         return current_epoch_losses
 
     def run_validation_epoch(self, current_epoch_losses):
+        self.ema.apply_shadow()
+        self.ema.model.eval()
+        self.ema.model.cuda()
 
         with tqdm.tqdm(total=len(self.val_data), file=sys.stdout) as pbar_val:  # create a progress bar for validation
             for x, y in self.val_data:  # get data batches
-                loss, accuracy = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
+                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x, y=y, model=self.ema.model)  # run a validation iter
+
                 current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
                 current_epoch_losses["val_acc"].append(accuracy)  # add current iter acc to val acc lst.
+                current_epoch_losses["val_f1"].append(f1)
+                current_epoch_losses["val_precision"].append(precision)
+                current_epoch_losses["val_recall"].append(recall)
+
                 pbar_val.update(1)  # add 1 step to the progress bar
                 pbar_val.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
 
+        self.ema.restore()
         return current_epoch_losses
 
     def run_testing_epoch(self, current_epoch_losses):
-
+        self.ema.apply_shadow()
+        self.ema.model.eval()
+        self.ema.model.cuda()
         with tqdm.tqdm(total=len(self.test_data), file=sys.stdout) as pbar_test:  # ini a progress bar
             for x, y in self.test_data:  # sample batch
-                loss, accuracy = self.run_evaluation_iter(x=x,
-                                                          y=y)  # compute loss and accuracy by running an evaluation step
+                # compute loss and accuracy by running an evaluation step
+                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x, y=y, model=self.ema.model)
+
                 current_epoch_losses["test_loss"].append(loss)  # save test loss
                 current_epoch_losses["test_acc"].append(accuracy)  # save test accuracy
+                current_epoch_losses["test_f1"].append(f1)
+                current_epoch_losses["test_precision"].append(precision)
+                current_epoch_losses["test_recall"].append(recall)
+
                 pbar_test.update(1)  # update progress bar status
                 pbar_test.set_description(
                     "loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))  # update progress bar string output
@@ -457,15 +356,17 @@ class ExperimentBuilderMixMatch(nn.Module):
         :return: The summary current_epoch_losses from starting epoch to total_epochs.
         """
         total_losses = {"train_acc": [], "train_loss": [], "val_acc": [],
-                        "val_loss": [], "curr_epoch": []}  # initialize a dict to keep the per-epoch metrics
+                        "val_loss": [], "val_f1": [], "val_precision": [], "val_recall": [],
+                        "curr_epoch": []}  # initialize a dict to keep the per-epoch metrics
         for i, epoch_idx in enumerate(range(self.starting_epoch, self.num_epochs)):
             epoch_start_time = time.time()
-            current_epoch_losses = {"train_acc": [], "train_loss": [], "val_acc": [], "val_loss": []}
+            current_epoch_losses = {"train_acc": [], "train_loss": [], "val_acc": [], "val_loss": [],
+                                    "val_f1": [], "val_precision": [], "val_recall": []}
 
-            current_epoch_losses = self.run_training_epoch(current_epoch_losses, current_epoch=epoch_idx)
+            current_epoch_losses = self.run_training_epoch(current_epoch_losses)
             current_epoch_losses = self.run_validation_epoch(current_epoch_losses)
 
-            if self.scheduler is not None:
+            if self.scheduler is not None and self.scheduler_type is not 'FixMatchCos':
                 self.scheduler.step()
 
             val_mean_accuracy = np.mean(current_epoch_losses['val_acc'])
@@ -506,7 +407,8 @@ class ExperimentBuilderMixMatch(nn.Module):
         self.load_model(model_save_dir=self.experiment_saved_models, model_idx=self.best_val_model_idx,
                         # load best validation model
                         model_save_name="train_model")
-        current_epoch_losses = {"test_acc": [], "test_loss": []}  # initialize a statistics dict
+        current_epoch_losses = {"test_acc": [], "test_loss": [], "test_f1": [], "test_precision": [],
+                                "test_recall": []}  # initialize a statistics dict
 
         current_epoch_losses = self.run_testing_epoch(current_epoch_losses=current_epoch_losses)
 
@@ -518,3 +420,95 @@ class ExperimentBuilderMixMatch(nn.Module):
                         stats_dict=test_losses, current_epoch=0, continue_from_mode=False)
 
         return total_losses, test_losses
+
+
+class EMA(object):
+    # From https://github.com/CoinCheung/fixmatch/
+    def __init__(self, model, alpha):
+        self.step = 0
+        self.model = model
+        self.alpha = alpha
+        self.shadow = self.get_model_state()
+        self.backup = {}
+        self.param_keys = [k for k, _ in self.model.named_parameters()]
+        self.buffer_keys = [k for k, _ in self.model.named_buffers()]
+
+    def update_params(self):
+        decay = min(self.alpha, (self.step + 1) / (self.step + 10))
+        state = self.model.state_dict()
+        for name in self.param_keys:
+            self.shadow[name].copy_(
+                decay * self.shadow[name]
+                + (1 - decay) * state[name]
+            )
+        #  for name in self.buffer_keys:
+        #      self.shadow[name].copy_(
+        #          decay * self.shadow[name]
+        #          + (1 - decay) * state[name]
+        #      )
+        self.step += 1
+
+    def update_buffer(self):
+        state = self.model.state_dict()
+        for name in self.buffer_keys:
+            self.shadow[name].copy_(state[name])
+
+    def apply_shadow(self):
+        self.backup = self.get_model_state()
+        self.model.load_state_dict(self.shadow)
+
+    def restore(self):
+        self.model.load_state_dict(self.backup)
+
+    def get_model_state(self):
+        return {
+            k: v.clone().detach()
+            for k, v in self.model.state_dict().items()
+        }
+
+
+class WarmupCosineLrScheduler(_LRScheduler):
+    '''
+    This is different from official definition, this is implemented according to
+    the paper of fix-match
+
+    # From https://github.com/CoinCheung/fixmatch/
+    '''
+
+    def __init__(
+            self,
+            optimizer,
+            max_iter,
+            warmup_iter,
+            warmup_ratio=5e-4,
+            warmup='exp',
+            last_epoch=-1,
+    ):
+        self.max_iter = max_iter
+        self.warmup_iter = warmup_iter
+        self.warmup_ratio = warmup_ratio
+        self.warmup = warmup
+        super(WarmupCosineLrScheduler, self).__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        ratio = self.get_lr_ratio()
+        lrs = [ratio * lr for lr in self.base_lrs]
+        return lrs
+
+    def get_lr_ratio(self):
+        if self.last_epoch < self.warmup_iter:
+            ratio = self.get_warmup_ratio()
+        else:
+            real_iter = self.last_epoch - self.warmup_iter
+            real_max_iter = self.max_iter - self.warmup_iter
+            ratio = np.cos((7 * np.pi * real_iter) / (16 * real_max_iter))
+        return ratio
+
+    def get_warmup_ratio(self):
+        assert self.warmup in ('linear', 'exp')
+        alpha = self.last_epoch / self.warmup_iter
+        if self.warmup == 'linear':
+            ratio = self.warmup_ratio + (1 - self.warmup_ratio) * alpha
+        elif self.warmup == 'exp':
+            ratio = self.warmup_ratio ** (1. - alpha)
+        return ratio
