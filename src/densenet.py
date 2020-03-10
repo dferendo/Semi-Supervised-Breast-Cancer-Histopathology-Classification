@@ -20,7 +20,7 @@ def _bn_function_factory(norm, relu, conv):
 
 class DenseLayer(nn.Module):
     def __init__(self, input_shape, growth_rate, bottleneck_factor, drop_rate, efficient=False,
-                 use_bias=True):
+                 use_bias=True, dilation=1):
         super(DenseLayer, self).__init__()
         self.drop_rate = drop_rate
         self.efficient = efficient
@@ -29,6 +29,8 @@ class DenseLayer(nn.Module):
         self.input_shape = input_shape
         self.layer_dict = nn.ModuleDict()
         self.bottleneck_factor = bottleneck_factor # bottleneck size
+        self.dilation = dilation
+        self.padding = self.dilation
 
         # build the network
         self.build_module()
@@ -55,7 +57,11 @@ class DenseLayer(nn.Module):
 
         self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=self.growth_rate,
-                                              kernel_size=3, stride=1, padding=1, bias=self.use_bias)
+                                              kernel_size=3,
+                                              stride=1,
+                                              padding=self.padding,
+                                              bias=self.use_bias,
+                                              dilation=self.dilation)
         out = self.layer_dict['conv_2'].forward(out)
 
         # TODO: Checkout dropout 2d
@@ -106,7 +112,7 @@ class DenseLayer(nn.Module):
 
 class DenseSeLayer(nn.Module):
     def __init__(self, input_shape, growth_rate, bottleneck_factor, drop_rate, efficient=False,
-                 use_bias=True, use_se=False, se_reduction=16):
+                 use_bias=True, use_se=False, se_reduction=16, dilation=1):
         super(DenseSeLayer, self).__init__()
         self.drop_rate = drop_rate
         self.efficient = efficient
@@ -116,6 +122,8 @@ class DenseSeLayer(nn.Module):
         self.layer_dict = nn.ModuleDict()
         self.bottleneck_factor = bottleneck_factor # bottleneck size
         self.se_reduction = se_reduction
+        self.dilation = dilation
+        self.padding = self.dilation
 
         # build the network
         self.build_module()
@@ -147,7 +155,8 @@ class DenseSeLayer(nn.Module):
 
         self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=self.growth_rate,
-                                              kernel_size=3, stride=1, padding=1, bias=self.use_bias)
+                                              kernel_size=3, stride=1, padding=self.dilation, bias=self.use_bias,
+                                              dilation=self.dilation)
         out = self.layer_dict['conv_2'].forward(out)
 
         # TODO: Checkout dropout 2d
@@ -252,7 +261,7 @@ class Transition(nn.Sequential):
 
 class DenseBlock(nn.Module):
     def __init__(self, input_shape, num_layers, bottleneck_factor, growth_rate, drop_rate, efficient=False,
-                 use_bias=True, use_se=False, se_reduction=16):
+                 use_bias=True, use_se=False, se_reduction=16, increasing_dilation=False):
         super(DenseBlock, self).__init__()
 
         self.drop_rate = drop_rate
@@ -266,6 +275,8 @@ class DenseBlock(nn.Module):
         self.num_layers = num_layers
         self.use_se = use_se
         self.se_reduction = se_reduction
+        self.increasing_dilation = increasing_dilation
+
         # build the network
         self.build_module()
 
@@ -273,6 +284,8 @@ class DenseBlock(nn.Module):
         print('\nDense Block', self.input_shape)
         x = torch.zeros(self.input_shape)
         features = [x]
+
+        dilation = 1
 
         # self.num_input_features + i * self.growth_rate,
         for i in range(self.num_layers):
@@ -286,7 +299,8 @@ class DenseBlock(nn.Module):
                     drop_rate=self.drop_rate,
                     efficient=self.efficient,
                     use_bias=self.use_bias,
-                    se_reduction=self.se_reduction
+                    se_reduction=self.se_reduction,
+                    dilation=dilation
                 )
                 out = self.layer_dict['dense_se_layer_%d' % (i + 1)].forward(*features)
             else:
@@ -296,10 +310,15 @@ class DenseBlock(nn.Module):
                     bottleneck_factor=self.bottleneck_factor,
                     drop_rate=self.drop_rate,
                     efficient=self.efficient,
-                    use_bias=self.use_bias
+                    use_bias=self.use_bias,
+                    dilation=dilation
                 )
                 out = self.layer_dict['dense_layer_%d' % (i + 1)].forward(*features)
             features.append(out)
+
+            if self.increasing_dilation:
+                dilation = dilation * 2
+
         feature_tensor = torch.cat(features, 1)
 
         # if self.use_se:
@@ -352,7 +371,7 @@ class DenseNet(nn.Module):
     def __init__(self, input_shape, growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
                  num_init_features=24, bottleneck_factor=4, drop_rate=0,
                  num_classes=10, small_inputs=True, efficient=False, use_bias=True,
-                 use_se=False, se_reduction=16):
+                 use_se=False, se_reduction=16, increasing_dilation=False):
         super(DenseNet, self).__init__()
         assert 0 < compression <= 1, 'compression of densenet should be between 0 and 1'
 
@@ -370,6 +389,7 @@ class DenseNet(nn.Module):
         self.compression = compression
         self.use_se = use_se
         self.se_reduction = se_reduction
+        self.increasing_dilation = increasing_dilation
 
         self.build_module()
 
@@ -393,7 +413,8 @@ class DenseNet(nn.Module):
                 efficient=self.efficient,
                 use_bias=self.use_bias,
                 use_se=self.use_se,
-                se_reduction=self.se_reduction
+                se_reduction=self.se_reduction,
+                increasing_dilation=self.increasing_dilation
             )
 
             self.layer_dict[f"denseblock_{i + 1}"] = block

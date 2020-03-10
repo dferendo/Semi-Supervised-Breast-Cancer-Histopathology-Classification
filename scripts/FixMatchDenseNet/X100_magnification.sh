@@ -33,16 +33,16 @@ do
       do
         for learning_rate in "${learning_rates[@]}"
         do
-          experiment_result_location="./experiments/ema_SGD_6666_${magnification}_${seed}_${labeled_images}_${loss_lambda_u}_${dropout}_${weight_decay}_${learning_rate}"
+          experiment_result_location="./experiments/se_ema_SGD_dilation__4444_${magnification}_${seed}_${labeled_images}_${loss_lambda_u}_${dropout}_${weight_decay}_${learning_rate}"
 
-          python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 300 --continue_from_epoch -1 --seed ${seed} \
+          python ../../src/main.py --use_gpu "True" --batch_size 20 --num_epochs 200 --continue_from_epoch -1 --seed ${seed} \
                         --image_num_channels 3 --image_height 224 --image_width 224 \
-                        --num_filters 24 \
+                        --num_filters 64 \
                         --dataset_location "${DATASET_DIR}" --experiment_name "${experiment_result_location}" \
                         --optim_type "SGD" --momentum 0.9 --nesterov "True" --weight_decay_coefficient ${weight_decay} \
                         --sched_type "FixMatchCos" --learn_rate_max ${learning_rate} --drop_rate ${dropout} \
                         --magnification "${magnification}" --use_mix_match "False" --multi_class "False" \
-                        --labelled_images_amount ${labeled_images} --loss_lambda_u ${loss_lambda_u} --use_se "False" \
+                        --labelled_images_amount ${labeled_images} --loss_lambda_u ${loss_lambda_u} --use_se "True" \
                         --use_fix_match "True" --n_raug 3 --m_raug 10
         done
       done

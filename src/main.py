@@ -77,6 +77,7 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
     ])
 
     if n_raug is not None and m_raug is not None:
+        print('-Doing RandAugment-')
         transformations_2.transforms.insert(1, RandAugment(n=n_raug, m=m_raug))
 
     # transformations_2 = transforms.Compose([
@@ -136,10 +137,10 @@ else:
 #(6, 12, 24, 16)
 # (6, 6, 6, 6)
 model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                 growth_rate=12, block_config=(6, 12, 24, 16), compression=0.5,
+                 growth_rate=32, block_config=(4, 4, 4, 4), compression=0.5,
                  num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
                  num_classes=num_output_classes, small_inputs=False, efficient=False,
-                 use_bias=True, use_se=args.use_se, se_reduction=args.se_reduction)
+                 use_bias=True, use_se=args.use_se, se_reduction=args.se_reduction, increasing_dilation=True)
 #
 # from torchvision import models
 # import torch.nn as nn
