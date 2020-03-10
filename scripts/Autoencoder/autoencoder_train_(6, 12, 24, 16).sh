@@ -23,21 +23,17 @@ do
             \
             --batch_size 20 \
             --dataset_location "${DATASET_DIR}" \
-            --val_size 0.2 \
-            --test_size 0.2 \
-            --num_of_workers 4 \
             --magnification ${magnification} \
             \
             --image_num_channels 3 \
             --image_height 224 \
             --image_width 224 \
             \
-            --block_config "6, 6, 6, 6" \
+            --block_config "6, 12, 24, 16" \
             --initial_num_filters 24 \
             --growth_rate 12 \
             --compression 0.5 \
             --bottleneck_factor 4 \
-            --increase_dilation_per_layer "True" \
             --use_se "${use_se}" \
             --se_reduction 16 \
             \
@@ -45,9 +41,15 @@ do
             --learn_rate_max 0.0001 \
             --learn_rate_min 0.00001 \
             --optim_type "SGD" \
-            --momemtum 0.9 \
+            --momentum 0.9 \
             --sched_type "True" \
             --drop_rate 0
+
+
+#            --increase_dilation_per_layer "True" \
+#                        --val_size 0.2 \
+#            --test_size 0.2 \
+#            --num_of_workers 4 \
     done
   done
 done

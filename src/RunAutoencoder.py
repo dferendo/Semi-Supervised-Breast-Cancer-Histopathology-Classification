@@ -48,7 +48,7 @@ def get_transformations(normalization_mean, normalization_var, image_height, ima
     ])
 
     noising = transforms.Compose([
-        transforms.RandomErasing(1, scale=(0.02, 0.20))
+        transforms.RandomErasing(0.5, scale=(0.02, 0.20))
     ])
 
     return transformations, noising
