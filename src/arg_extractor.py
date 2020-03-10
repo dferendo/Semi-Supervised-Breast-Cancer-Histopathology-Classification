@@ -19,6 +19,10 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
+def strToTuple(v):
+    return tuple([int(x) for x in v.split(',')])
+
+
 def get_shared_arguments():
     """
         Returns a namedtuple with arguments extracted from the command line.
@@ -40,7 +44,7 @@ def get_shared_arguments():
     parser.add_argument('--num_layers', nargs="?", type=int, default=4,
                         help='Number of convolutional layers in the network (excluding '
                              'dimensionality reduction layers)')
-    parser.add_argument('--num_filters', nargs="?", type=int, default=64,
+    parser.add_argument('--initial_num_filters', nargs="?", type=int, default=64,
                         help='Number of convolutional filters per convolutional layer in the network (excluding '
                              'dimensionality reduction layers)')
     parser.add_argument('--num_epochs', nargs="?", type=int, default=100, help='The experiment\'s epoch budget')
@@ -100,6 +104,14 @@ def get_shared_arguments():
                         help='The fixmatch threshold')
     parser.add_argument('--pretrained_weights_locations', nargs="?", type=str, default=None,
                         help='Pre-trained weights locations for Densenet')
+    parser.add_argument('--block_config', nargs="?", type=strToTuple, default=None,
+                        help='Block config for Densenet')
+    parser.add_argument('--growth_rate', nargs="?", type=int, default=None,
+                        help='Densenet Growth Rate')
+    parser.add_argument('--compression', nargs="?", type=float, default=None,
+                        help='Densenet compression')
+    parser.add_argument('--bottleneck_factor', nargs="?", type=int, default=None,
+                        help='Densenet Bottleneck')
 
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])

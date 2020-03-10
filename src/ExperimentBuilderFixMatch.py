@@ -369,11 +369,7 @@ class ExperimentBuilderFixMatch(nn.Module):
             else:
                 new_dict[key] = self.state_dict()[key]
 
-        print(self.state_dict()['model.layer_dict.denseblock_1.layer_dict.dense_se_layer_4.layer_dict.bn_1.weight'])
-
         self.load_state_dict(state_dict=new_dict)
-
-        print(self.state_dict()['model.layer_dict.denseblock_1.layer_dict.dense_se_layer_4.layer_dict.bn_1.weight'])
 
     def run_experiment(self):
         """
