@@ -37,13 +37,13 @@ do
             --use_se "${use_se}" \
             --se_reduction 16 \
             \
-            --weight_decay_coefficient 0.001 \
-            --learn_rate_max 0.0001 \
-            --learn_rate_min 0.00001 \
-            --optim_type "SGD" \
+            --weight_decay_coefficient 0.0001 \
+            --learn_rate_max 0.01 \
+            --learn_rate_min 0.0001 \
+            --optim_type "Adam" \
             --momentum 0.9 \
-            --sched_type "True" \
-            --drop_rate 0
+            --sched_type "Cos" \
+            --drop_rate 0.2
 
 #                        --val_size 0.2 \
 #            --test_size 0.2 \

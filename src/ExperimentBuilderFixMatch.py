@@ -18,6 +18,42 @@ from ERF_Scheduler import ERF
 from storage_utils import save_statistics
 from sklearn.metrics import f1_score, precision_score, recall_score
 
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import Line2D
+
+
+def plot_grad_flow(named_parameters):
+    '''Plots the gradients flowing through different layers in the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+
+    Usage: Plug this function in Trainer class after loss.backwards() as
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
+    ave_grads = []
+    max_grads = []
+    layers = []
+    for n, p in named_parameters:
+        if (p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+            max_grads.append(p.grad.abs().max())
+
+            if p.grad.abs().max() < 10**(-40):
+                print(p)
+
+    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+    plt.hlines(0, 0, len(ave_grads) + 1, lw=2, color="k")
+    plt.xticks(range(0, len(ave_grads), 1), layers, rotation="vertical")
+    plt.yscale('log')
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow")
+    plt.grid(True)
+    plt.legend([Line2D([0], [0], color="c", lw=4),
+                Line2D([0], [0], color="b", lw=4),
+                Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+    plt.show()
+
 
 class ExperimentBuilderFixMatch(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data, train_data_unlabeled,
@@ -57,6 +93,11 @@ class ExperimentBuilderFixMatch(nn.Module):
             print("use CPU")
             self.device = torch.device('cpu')  # sets the device to be CPU
             print(self.device)
+
+        if pretrained_weights_locations is not None:
+            self.load_pre_trained_model(model_save_dir=pretrained_weights_locations,
+                                        model_save_name="train_model",
+                                        model_idx='best')
 
         self.ema = EMA(model=self.model, alpha=0.999)
 
@@ -136,10 +177,6 @@ class ExperimentBuilderFixMatch(nn.Module):
         if not os.path.exists(self.experiment_saved_models):
             os.mkdir(self.experiment_saved_models)  # create the experiment saved models directory
 
-        if pretrained_weights_locations is not None:
-            self.load_pre_trained_model(model_save_dir=pretrained_weights_locations,
-                                        model_save_name="train_model",
-                                        model_idx='best')
 
         self.num_epochs = num_epochs
         # self.criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
@@ -227,6 +264,8 @@ class ExperimentBuilderFixMatch(nn.Module):
 
         self.optimizer.zero_grad()  # set all weight grads from previous training iters to 0
         loss.backward()  # backpropagate to compute gradients for current iter loss
+
+        # plot_grad_flow(self.model.named_parameters())
 
         self.ema.update_params()
 
@@ -359,15 +398,18 @@ class ExperimentBuilderFixMatch(nn.Module):
     def load_pre_trained_model(self, model_save_dir, model_save_name, model_idx):
         state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))
         new_dict = {}
+        decoder_dict = []
 
         for key in self.state_dict().keys():
             temp_key = key.replace('model.', '')
             temp_key = f'model.layer_dict.encoder.{temp_key}'
 
-            if temp_key in state['network']:
+            if temp_key in state['network'] and state['network'][temp_key].data.abs().max() < 10**(-20):
                 new_dict[key] = state['network'][temp_key]
             else:
                 new_dict[key] = self.state_dict()[key]
+
+        # plot_grad_flow(decoder_dict)
 
         self.load_state_dict(state_dict=new_dict)
 

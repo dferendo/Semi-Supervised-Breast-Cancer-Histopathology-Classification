@@ -48,7 +48,8 @@ def get_transformations(normalization_mean, normalization_var, image_height, ima
     ])
 
     noising = transforms.Compose([
-        transforms.RandomErasing(1, scale=(0.02, 0.20))
+        transforms.ColorJitter(hue=0),
+        transforms.RandomErasing(1, scale=(0.02, 0.10))
     ])
 
     return transformations, noising
@@ -88,7 +89,8 @@ densenetParameters = DenseNetParameters(input_shape=(args.batch_size, args.image
                                         block_config=args.block_config,
                                         growth_rate=args.growth_rate,
                                         compression=args.compression,
-                                        bottleneck_factor=args.bottleneck_factor)
+                                        bottleneck_factor=args.bottleneck_factor,
+                                        drop_rate=args.drop_rate)
 
 model = Autoencoder(densenetParameters)
 

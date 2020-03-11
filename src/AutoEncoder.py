@@ -69,10 +69,11 @@ class DecoderTransition(nn.Sequential):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, input_shape, use_bias=True):
+    def __init__(self, input_shape, use_bias=True, drop_rate=0):
         super(DecoderLayer, self).__init__()
         self.use_bias = use_bias
         self.input_shape = input_shape
+        self.drop_rate = drop_rate
         self.layer_dict = nn.ModuleDict()
 
         # build the network
@@ -84,6 +85,11 @@ class DecoderLayer(nn.Module):
         print('Dense Layer shape', self.input_shape)
         x = torch.zeros(self.input_shape)
         out = x
+
+        if self.drop_rate > 0:
+            print('Dropout with', self.drop_rate)
+            self.layer_dict['dropout'] = nn.Dropout(p=self.drop_rate)
+            out = self.layer_dict['dropout'](out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=out.shape[1],
@@ -112,6 +118,9 @@ class DecoderLayer(nn.Module):
     def forward(self, x):
         # concatenated features
         out = x
+        if self.drop_rate > 0:
+            out = self.layer_dict['dropout'](out)
+
         out = self.layer_dict['conv_1'].forward(out)
         out = self.layer_dict['bn_1'].forward(out)
         out = F.relu(out)
@@ -135,11 +144,12 @@ class DecoderLayer(nn.Module):
 
 
 class DecoderDenseBlock(nn.Module):
-    def __init__(self, input_shape, number_of_layers=3, use_bias=True):
+    def __init__(self, input_shape, number_of_layers=3, use_bias=True, drop_rate=0):
         super(DecoderDenseBlock, self).__init__()
         self.use_bias = use_bias
         self.input_shape = input_shape
         self.number_of_layers = number_of_layers
+        self.drop_rate = drop_rate
         self.layer_dict = nn.ModuleDict()
 
         # build the network
@@ -153,7 +163,7 @@ class DecoderDenseBlock(nn.Module):
         out = x
 
         for layer in range(0, self.number_of_layers):
-            self.layer_dict[f'res_block_{layer}'] = DecoderLayer(self.input_shape, self.use_bias)
+            self.layer_dict[f'res_block_{layer}'] = DecoderLayer(self.input_shape, self.use_bias, self.drop_rate)
             out = self.layer_dict[f'res_block_{layer}'].forward(out)
 
         return out
@@ -178,12 +188,13 @@ class DecoderDenseBlock(nn.Module):
 
 
 class AutoDecoder(nn.Module):
-    def __init__(self, block_config, use_bias, input_shape, growth_rate, compression, num_of_layers):
+    def __init__(self, block_config, use_bias, input_shape, growth_rate, compression, num_of_layers, drop_rate):
         super(AutoDecoder, self).__init__()
         self.block_config = block_config
         self.use_bias = use_bias
         self.input_shape = input_shape
         self.growth_rate = growth_rate
+        self.drop_rate = drop_rate
         self.compression = compression
         self.num_of_layers = num_of_layers
 
@@ -199,7 +210,7 @@ class AutoDecoder(nn.Module):
         for i, block_layers in enumerate(self.block_config[::-1]):
 
             self.layer_dict[f'block_{i}'] = DecoderDenseBlock(input_shape=out.shape, number_of_layers=self.num_of_layers,
-                                                              use_bias=self.use_bias)
+                                                              use_bias=self.use_bias, drop_rate=self.drop_rate)
             out = self.layer_dict[f'block_{i}'].forward(out)
 
             self.layer_dict[f't_block_{i}'] = DecoderTransition(input_shape=out.shape, use_bias=self.use_bias,
@@ -263,7 +274,8 @@ class Autoencoder(nn.Module):
                                                  input_shape=out.shape,
                                                  growth_rate=self.densenetParameters.growth_rate,
                                                  compression=self.densenetParameters.compression,
-                                                 num_of_layers=2)
+                                                 num_of_layers=2,
+                                                 drop_rate=self.densenetParameters.drop_rate)
 
         out = self.layer_dict['decoder'].forward(out)
 

@@ -87,7 +87,7 @@ class ExperimentBuilder(nn.Module):
         elif scheduler == 'Cos':
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
                                                                   T_max=num_epochs,
-                                                                  eta_min=0.00001)
+                                                                  eta_min=sched_params['lr_min'])
         else:
             self.scheduler = None
 
