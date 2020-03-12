@@ -3,7 +3,7 @@
 export DATASET_DIR="../../data/BreaKHis_v1/"
 
 magnifications=("40X")
-use_ses=("True")
+use_ses=("False")
 seeds=(9392)
 
 for seed in "${seeds[@]}"
@@ -12,7 +12,7 @@ do
   do
     for use_se in "${use_ses[@]}"
     do
-      experiment_result_location="./experiments/2exc_noaug_lrelu_1bn_autoencoder_test_(4,4,4,4)_${magnification}_${use_se}"
+      experiment_result_location="./experiments/dilation_lrelucbam_2exc_noaug_lrelu_1bn_autoencoder_test_(4,4,4,4)_${magnification}_${use_se}"
 
       python ../../src/RunAutoencoder.py \
             --seed ${seed} \
@@ -37,8 +37,8 @@ do
             --use_se "${use_se}" \
             --se_reduction 16 \
             \
-            --weight_decay_coefficient 0.0001 \
-            --learn_rate_max 0.003 \
+            --weight_decay_coefficient 0.000001 \
+            --learn_rate_max 0.006 \
             --learn_rate_min 0.00001 \
             --optim_type "Adam" \
             --momentum 0.9 \

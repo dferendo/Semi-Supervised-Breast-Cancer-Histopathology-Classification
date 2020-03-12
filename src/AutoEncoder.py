@@ -69,10 +69,12 @@ class DecoderTransition(nn.Sequential):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, input_shape, use_bias=True):
+    def __init__(self, input_shape, use_bias=True, dilation=1):
         super(DecoderLayer, self).__init__()
         self.use_bias = use_bias
         self.input_shape = input_shape
+        self.dilation = dilation
+        self.padding=dilation
         self.layer_dict = nn.ModuleDict()
 
         # build the network
@@ -87,7 +89,10 @@ class DecoderLayer(nn.Module):
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=out.shape[1],
-                                              kernel_size=3, stride=1, padding=1, bias=self.use_bias)
+                                              kernel_size=3, stride=1,
+                                              padding=self.padding,
+                                              dilation=self.dilation,
+                                              bias=self.use_bias)
         out = self.layer_dict['conv_1'].forward(out)
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
@@ -97,7 +102,10 @@ class DecoderLayer(nn.Module):
 
         self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=out.shape[1],
-                                              kernel_size=3, stride=1, padding=1, bias=self.use_bias)
+                                              kernel_size=3, stride=1,
+                                              padding=self.padding+1,
+                                              dilation=self.dilation+1,
+                                              bias=self.use_bias)
         out = self.layer_dict['conv_2'].forward(out)
 
         self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
@@ -152,10 +160,11 @@ class DecoderDenseBlock(nn.Module):
         x = torch.zeros(self.input_shape)
         out = x
 
+        dilation=1
         for layer in range(0, self.number_of_layers):
             self.layer_dict[f'res_block_{layer}'] = DecoderLayer(self.input_shape, self.use_bias)
             out = self.layer_dict[f'res_block_{layer}'].forward(out)
-
+            dilation *= 2
         return out
 
     def forward(self, x):
