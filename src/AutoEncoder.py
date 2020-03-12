@@ -263,7 +263,7 @@ class Autoencoder(nn.Module):
                                               drop_rate=self.densenetParameters.drop_rate,
                                               num_classes=self.densenetParameters.num_classes,
                                               no_classification=True,
-                                              use_se=True,
+                                              use_se=False,
                                               increasing_dilation=True,
                                               small_inputs=False)
 
@@ -286,14 +286,16 @@ class Autoencoder(nn.Module):
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_1'].forward(out)
+        #
+        # out = F.relu(out)
 
         self.layer_dict['conv_final_b'] = nn.ConvTranspose2d(out.shape[1],out_channels=3, kernel_size=7,
                                               stride=1, padding=3, bias=self.densenetParameters.use_bias)
 
         out = self.layer_dict['conv_final_b'].forward(out)
 
-        self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
-        out = self.layer_dict['bn_2'].forward(out)
+        # self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
+        # out = self.layer_dict['bn_2'].forward(out)
 
         return out
 
@@ -303,10 +305,13 @@ class Autoencoder(nn.Module):
         out = self.layer_dict['decoder'].forward(out)
 
         out = self.layer_dict['conv_final_a'].forward(out)
+        out = self.layer_dict['bn_1'].forward(out)
+
+        # out = F.relu(out)
+
         out = self.layer_dict['conv_final_b'].forward(out)
 
-        out = self.layer_dict['bn_1'].forward(out)
-        out = self.layer_dict['bn_2'].forward(out)
+        # out = self.layer_dict['bn_2'].forward(out)
 
         return out
 
