@@ -179,6 +179,12 @@ class ExperimentBuilder(nn.Module):
         self.optimizer.step()  # update network parameters
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         # accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
+
+        for n, p in self.model.named_parameters():
+            if (p.requires_grad) and ("bias" not in n):
+                if p.abs().max() < 10 ** (-30):
+                    raise Exception('Weights smaller than 10e-30')
+
         return loss.data.detach().cpu().numpy(), 0
 
     def run_evaluation_iter(self, x, y):
