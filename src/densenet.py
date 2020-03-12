@@ -10,10 +10,10 @@ from collections import OrderedDict
 from cbam import CBAM
 
 # TODO: Delete if we do not use memory efficient version
-def _bn_function_factory(norm, relu, conv):
+def _bn_function_factory(norm, leaky_relu, conv):
     def bn_function(*inputs):
         concated_features = torch.cat(inputs, 1)
-        bottleneck_output = conv(relu(norm(concated_features)))
+        bottleneck_output = conv(leaky_relu(norm(concated_features)))
         return bottleneck_output
 
     return bn_function
@@ -45,7 +45,7 @@ class DenseLayer(nn.Module):
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=self.bottleneck_factor * self.growth_rate,
@@ -54,7 +54,7 @@ class DenseLayer(nn.Module):
 
         self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_2'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=self.growth_rate,
@@ -77,11 +77,11 @@ class DenseLayer(nn.Module):
         # concatenated features
         out = torch.cat(prev_features, 1)
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
         out = self.layer_dict['conv_1'].forward(out)
 
         out = self.layer_dict['bn_2'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
         out = self.layer_dict['conv_2'].forward(out)
 
         if self.drop_rate > 0:
@@ -90,12 +90,12 @@ class DenseLayer(nn.Module):
         return out
 
     def forward_original(self, *prev_features):
-        bn_function = _bn_function_factory(self.norm1, self.relu1, self.conv1)
+        bn_function = _bn_function_factory(self.norm1, self.leaky_relu1, self.conv1)
         if self.efficient and any(prev_feature.requires_grad for prev_feature in prev_features):
             bottleneck_output = cp.checkpoint(bn_function, *prev_features)
         else:
             bottleneck_output = bn_function(*prev_features)
-        new_features = self.conv2(self.relu2(self.norm2(bottleneck_output)))
+        new_features = self.conv2(self.leaky_relu2(self.norm2(bottleneck_output)))
         if self.drop_rate > 0:
             new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
         return new_features
@@ -144,7 +144,7 @@ class DenseSeLayer(nn.Module):
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=self.bottleneck_factor * self.growth_rate,
@@ -153,7 +153,7 @@ class DenseSeLayer(nn.Module):
 
         self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_2'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=self.growth_rate,
@@ -176,11 +176,11 @@ class DenseSeLayer(nn.Module):
         out = self.layer_dict['se'].forward(out)
 
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
         out = self.layer_dict['conv_1'].forward(out)
 
         out = self.layer_dict['bn_2'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
         out = self.layer_dict['conv_2'].forward(out)
 
         if self.drop_rate > 0:
@@ -189,12 +189,12 @@ class DenseSeLayer(nn.Module):
         return out
 
     def forward_original(self, *prev_features):
-        bn_function = _bn_function_factory(self.norm1, self.relu1, self.conv1)
+        bn_function = _bn_function_factory(self.norm1, self.leaky_relu1, self.conv1)
         if self.efficient and any(prev_feature.requires_grad for prev_feature in prev_features):
             bottleneck_output = cp.checkpoint(bn_function, *prev_features)
         else:
             bottleneck_output = bn_function(*prev_features)
-        new_features = self.conv2(self.relu2(self.norm2(bottleneck_output)))
+        new_features = self.conv2(self.leaky_relu2(self.norm2(bottleneck_output)))
         if self.drop_rate > 0:
             new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
         return new_features
@@ -230,7 +230,7 @@ class Transition(nn.Sequential):
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_output_filters,
                                               kernel_size=1, stride=1, bias=self.use_bias)
@@ -243,7 +243,7 @@ class Transition(nn.Sequential):
 
     def forward(self, inputs):
         out = self.layer_dict['bn_1'].forward(inputs)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
         out = self.layer_dict['conv_1'].forward(out)
 
         out = self.layer_dict['pool_1'].forward(out)
@@ -435,7 +435,7 @@ class DenseNet(nn.Module):
         out = self.layer_dict['final_bn'].forward(out)
 
         if not self.no_classification:
-            out = F.relu(out)
+            out = F.leaky_relu(out)
             out = F.adaptive_avg_pool2d(out, (1, 1))
             out = torch.flatten(out, 1)
 
@@ -457,7 +457,7 @@ class DenseNet(nn.Module):
         out = self.layer_dict['final_bn'].forward(out)
 
         if not self.no_classification:
-            out = F.relu(out)
+            out = F.leaky_relu(out)
             out = F.adaptive_avg_pool2d(out, (1, 1))
             out = torch.flatten(out, 1)
 
@@ -509,7 +509,7 @@ class InputConvolutionBlock(nn.Module):
             self.layer_dict['bn_0'] = nn.BatchNorm2d(out.shape[1])
             out = self.layer_dict['bn_0'].forward(out)
 
-            out = F.relu(out)
+            out = F.leaky_relu(out)
 
             self.layer_dict['pool_0'] = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, ceil_mode=False)
             out = self.layer_dict['pool_0'].forward(out)
@@ -524,7 +524,7 @@ class InputConvolutionBlock(nn.Module):
         else:
             out = self.layer_dict['conv_0'].forward(out)
             out = self.layer_dict['bn_0'].forward(out)
-            out = F.relu(out)
+            out = F.leaky_relu(out)
             out = self.layer_dict['pool_0'].forward(out)
 
         return out
@@ -562,7 +562,7 @@ class SqueezeExciteLayer(nn.Module):
         self.layer_dict['se_global_avg_pool'] = nn.AdaptiveAvgPool2d(1)
         self.layer_dict['se_fc'] = nn.Sequential(
             nn.Linear(self.channels, self.channels // self.reduction, bias=self.use_bias),
-            nn.ReLU(inplace=True),
+            nn.leaky_relu(inplace=True),
             nn.Linear(self.channels // self.reduction, self.channels, bias=self.use_bias),
             nn.Sigmoid()
         )
