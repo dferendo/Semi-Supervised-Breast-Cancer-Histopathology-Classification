@@ -12,7 +12,7 @@ do
   do
     for use_se in "${use_ses[@]}"
     do
-      experiment_result_location="./experiments/1bn_autoencoder_test_(4,4,4,4)_${magnification}_${use_se}"
+      experiment_result_location="./experiments/gelu_1bn_autoencoder_test_(4,4,4,4)_${magnification}_${use_se}"
 
       python ../../src/RunAutoencoder.py \
             --seed ${seed} \

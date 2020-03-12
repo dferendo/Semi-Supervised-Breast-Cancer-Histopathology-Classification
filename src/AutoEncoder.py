@@ -29,7 +29,7 @@ class DecoderTransition(nn.Sequential):
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], out_channels=self.num_output_filters,
                                               kernel_size=3, stride=1, padding=1, bias=self.use_bias)
@@ -37,7 +37,7 @@ class DecoderTransition(nn.Sequential):
 
         self.layer_dict['bn_2'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_2'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         return out
 
@@ -48,12 +48,12 @@ class DecoderTransition(nn.Sequential):
             out = self.layer_dict['up1'].forward(out)
 
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         out = self.layer_dict['conv_1'].forward(out)
 
         out = self.layer_dict['bn_2'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         return out
 
@@ -93,7 +93,7 @@ class DecoderLayer(nn.Module):
         self.layer_dict['bn_1'] = nn.BatchNorm2d(out.shape[1])
         out = self.layer_dict['bn_1'].forward(out)
 
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1],
                                               out_channels=out.shape[1],
@@ -105,7 +105,7 @@ class DecoderLayer(nn.Module):
 
         out = out + x
 
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         return out
 
@@ -114,12 +114,12 @@ class DecoderLayer(nn.Module):
         out = x
         out = self.layer_dict['conv_1'].forward(out)
         out = self.layer_dict['bn_1'].forward(out)
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         out = self.layer_dict['conv_2'].forward(out)
         out = self.layer_dict['bn_2'].forward(out)
         out = out + x
-        out = F.relu(out)
+        out = F.leaky_relu(out)
 
         return out
 
