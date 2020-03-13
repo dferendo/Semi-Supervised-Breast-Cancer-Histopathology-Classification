@@ -45,7 +45,7 @@ python ../../src/main.py \
         --seed ${1} \
         \
         --magnification "${5}" \
-        --dataset_location "${DATASET_DIR}" \
+        --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
         --experiment_name "${11}" \
         --multi_class "False" \
         --labelled_images_amount ${6} \
