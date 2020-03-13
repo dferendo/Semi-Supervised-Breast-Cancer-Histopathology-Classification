@@ -131,13 +131,15 @@ else:
     print('Binary-class')
     num_output_classes = 2
 
-#(6, 12, 24, 16)
-# (6, 6, 6, 6)
 model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                 growth_rate=32, block_config=(4, 4, 4, 4), compression=0.5,
-                 num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
+                 growth_rate=args.growth_rate, block_config=args.block_config,
+                 compression=args.compression,
+                 num_init_features=args.initial_num_filters,
+                 bottleneck_factor=args.bottleneck_factor,
+                 drop_rate=args.drop_rate,
                  num_classes=num_output_classes, small_inputs=False, efficient=False,
-                 use_bias=True, use_se=args.use_se, se_reduction=args.se_reduction, increasing_dilation=True)
+                 use_bias=True,
+                 use_se=args.use_se, se_reduction=args.se_reduction, increasing_dilation=True)
 #
 # from torchvision import models
 # import torch.nn as nn
