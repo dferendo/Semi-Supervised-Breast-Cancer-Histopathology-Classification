@@ -245,6 +245,11 @@ class ExperimentBuilder(nn.Module):
                 pbar_train.update(1)
                 pbar_train.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
 
+                for n,p in self.model.named_parameters():
+                    if (p.requires_grad) and ("bias" not in n):
+                        if p.abs().max() < 10 ** (-30):
+                            raise Exception('Weights smaller than 10e-30')
+
         return current_epoch_losses
 
     def run_validation_epoch(self, current_epoch_losses):

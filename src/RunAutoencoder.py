@@ -49,8 +49,14 @@ def get_transformations(normalization_mean, normalization_var, image_height, ima
     ])
 
     noising = transforms.Compose([
-        transforms.ColorJitter(hue=0),
-        transforms.RandomErasing(1, scale=(0.02, 0.10))
+        transforms.ToPILImage(),
+        # transforms.ColorJitter(hue=0),
+        transforms.ToTensor(),
+        # transforms.RandomErasing(1, scale=(0.02, 0.03)),
+        # transforms.RandomErasing(1, scale=(0.02, 0.03)),
+        # transforms.RandomErasing(0.3, scale=(0.02, 0.03)),
+        # transforms.RandomErasing(0.3, scale=(0.02, 0.03)),
+        # transforms.RandomErasing(0.3, scale=(0.02, 0.03))
     ])
 
     return transformations, noising
