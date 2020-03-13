@@ -25,15 +25,15 @@ loss_lambda_u=1
 
 seeds=(939)
 labeled_images_amount=(5)
-dropouts=(0)
-weight_decays=(0.00001)
-learning_rates=(0.001)
+dropouts=(0 0.1)
+weight_decays=(0.0001 0.00001 0.000001)
+learning_rates=(0.005 0.001 0.0001)
 magnifications=("40X")
 
-use_ses=("True" "False")
-arch_block=("4, 4, 4, 4" "6, 6, 6, 6" "6, 12, 24, 16")
-arch_filters=(64 24 24)
-arch_growth_rate=(32 12 12)
+use_ses=("True")
+arch_block=("4, 4, 4, 4")
+arch_filters=(64)
+arch_growth_rate=(32)
 
 
 for seed in "${seeds[@]}"
