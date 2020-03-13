@@ -43,7 +43,9 @@ do
             --optim_type "Adam" \
             --momentum 0.9 \
             --sched_type "Cos" \
-            --drop_rate 0.2
+            --drop_rate 0.2 \
+            \
+            --pretrained_weights_locations "./old_experiments/autoencoder_test_(4,4,4,4)_40X_True/saved_models"
 
             #            --increase_dilation_per_layer "True" \
             #            --val_size 0.2 \
