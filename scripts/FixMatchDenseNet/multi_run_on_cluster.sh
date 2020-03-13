@@ -23,7 +23,7 @@ loss_lambda_u=1
 #magnifications=("40X")
 
 
-seeds=(939)
+seeds=(9392 342432 764365)
 labeled_images_amount=(5)
 dropouts=(0 0.1)
 weight_decays=(0.0001 0.00001 0.000001)
