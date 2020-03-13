@@ -1,9 +1,5 @@
 #!/bin/sh
 
-
-
-#!/bin/sh
-
 export DATASET_DIR="../../data/BreaKHis_v1/"
 
 #dropout=0.2
@@ -19,14 +15,22 @@ loss_lambda_u=1
 # best dropout 0.2 wd 0.001 lr 0.001
 # 2nd dropout 0 wd 1e-5 lr 0.001
 
-seeds=(9392 344 89436 495845 1232332)
-labeled_images_amount=(5)
-dropouts=(0 0.1)
-weight_decays=(0.0001 0.00001 0.000001)
-learning_rates=(0.005 0.001 0.0001)
-magnifications=("40X")
-use_ses=("True" "False")
+#seeds=(9392 344 89436)
+#labeled_images_amount=(5)
+#dropouts=(0 0.1)
+#weight_decays=(0.0001 0.00001 0.000001)
+#learning_rates=(0.005 0.001 0.0001)
+#magnifications=("40X")
 
+
+seeds=(939)
+labeled_images_amount=(5)
+dropouts=(0)
+weight_decays=(0.00001)
+learning_rates=(0.001)
+magnifications=("40X")
+
+use_ses=("True" "False")
 arch_block=("4, 4, 4, 4" "6, 6, 6, 6" "6, 12, 24, 16")
 arch_filters=(64 24 24)
 arch_growth_rate=(32 12 12)
