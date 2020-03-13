@@ -51,7 +51,7 @@ do
                 experiment_result_location="./experiments/fixmatch_architecture_${seed}_${arch_block[$index]}_${arch_filters[$index]}_${arch_growth_rate[$index]}_${magnification}_${labeled_images}_${dropout}_${weight_decay}_${learning_rate}_${use_se}"
 
                 if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
-                  sbatch mlp_cluster_train.sh ${seed} ${arch_block[$index]} ${arch_filters[$index]} ${arch_growth_rate[$index]} ${magnification} ${labeled_images} ${dropout} ${weight_decay} ${learning_rate} ${use_se} ${experiment_result_location}
+                  sbatch mlp_cluster_train.sh ${seed} "${arch_block[$index]}" ${arch_filters[$index]} ${arch_growth_rate[$index]} "${magnification}" ${labeled_images} ${dropout} ${weight_decay} ${learning_rate} ${use_se} "${experiment_result_location}"
                 fi
                 done
             done
