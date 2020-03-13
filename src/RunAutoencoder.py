@@ -89,7 +89,8 @@ densenetParameters = DenseNetParameters(input_shape=(args.batch_size, args.image
                                         block_config=args.block_config,
                                         growth_rate=args.growth_rate,
                                         compression=args.compression,
-                                        bottleneck_factor=args.bottleneck_factor)
+                                        bottleneck_factor=args.bottleneck_factor,
+                                        use_se=args.use_se)
 
 model = Autoencoder(densenetParameters)
 

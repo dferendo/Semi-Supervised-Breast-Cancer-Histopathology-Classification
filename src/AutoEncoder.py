@@ -261,7 +261,7 @@ class Autoencoder(nn.Module):
                                               drop_rate=self.densenetParameters.drop_rate,
                                               num_classes=self.densenetParameters.num_classes,
                                               no_classification=True,
-                                              use_se=True,
+                                              use_se=self.densenetParameters.use_se,
                                               increasing_dilation=True,
                                               small_inputs=False)
 
@@ -272,7 +272,7 @@ class Autoencoder(nn.Module):
                                                  input_shape=out.shape,
                                                  growth_rate=self.densenetParameters.growth_rate,
                                                  compression=self.densenetParameters.compression,
-                                                 num_of_layers=2)
+                                                 num_of_layers=1)
 
         out = self.layer_dict['decoder'].forward(out)
 

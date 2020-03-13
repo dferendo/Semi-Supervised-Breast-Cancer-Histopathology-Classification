@@ -12,7 +12,7 @@ do
   do
     for use_se in "${use_ses[@]}"
     do
-      experiment_result_location="./experiments/autoencoder_test_(6,6,6,6)_${magnification}_${use_se}"
+      experiment_result_location="./experiments/1layer_dilation_autoencoder_test_(6,6,6,6)_${magnification}_${use_se}"
 
       python ../../src/RunAutoencoder.py \
             --seed ${seed} \
@@ -37,12 +37,12 @@ do
             --use_se "${use_se}" \
             --se_reduction 16 \
             \
-            --weight_decay_coefficient 0.001 \
-            --learn_rate_max 0.0001 \
+            --weight_decay_coefficient 0.000001 \
+            --learn_rate_max 0.006 \
             --learn_rate_min 0.00001 \
-            --optim_type "SGD" \
+            --optim_type "Adam" \
             --momentum 0.9 \
-            --sched_type "True" \
+            --sched_type "Cos" \
             --drop_rate 0
 
 #                        --val_size 0.2 \
