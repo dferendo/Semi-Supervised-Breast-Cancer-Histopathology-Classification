@@ -33,7 +33,10 @@ export DATASET_DIR=${TMP}/datasets
 
 # Activate the relevant virtual environment:
 rsync -ua /home/${STUDENT_ID}/Leveraging-Unlabeled-Data-For-Breast-Cancer-Classification/data/BreaKHis_v1.tar.gz "${DATASET_DIR}"
-tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz" -C "${DATASET_DIR}"
+
+if [ ! -d "${DATASET_DIR}/BreaKHis_v1/" ]; then
+  tar -xzf "${DATASET_DIR}/BreaKHis_v1.tar.gz" -C "${DATASET_DIR}"
+fi
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
