@@ -23,6 +23,10 @@ def strToTuple(v):
     return tuple([int(x) for x in v.split(',')])
 
 
+def strToArray(v):
+    return [float(x) for x in v.split(',')]
+
+
 def get_shared_arguments():
     """
         Returns a namedtuple with arguments extracted from the command line.
@@ -112,7 +116,12 @@ def get_shared_arguments():
                         help='Densenet compression')
     parser.add_argument('--bottleneck_factor', nargs="?", type=int, default=None,
                         help='Densenet Bottleneck')
-
+    parser.add_argument('--transformation_labeled_parameters', nargs="?", type=strToArray, default=None,
+                        help='Which transformation to use and and the parameters of the transformation')
+    parser.add_argument('--transformation_unlabeled_parameters', nargs="?", type=strToArray, default=None,
+                        help='Which transformation to use and and the parameters of the transformation')
+    parser.add_argument('--transformation_unlabeled_strong_parameters', nargs="?", type=strToArray, default=None,
+                        help='Which transformation to use and and the parameters of the transformation')
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
 

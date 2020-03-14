@@ -5,7 +5,7 @@ import pandas as pd
 
 
 def print_test_summary(path_to_read):
-    columns = ['Magnification', 'Unlabeled Amount', 'Dropout Value', 'Weight Decay', 'Learning Rate', 'Test Accuracy', 'Test Loss', 'Test f1', 'Test Precision', 'Test Recall']
+    columns = ['Seed', 'Magnification', 'Labeled images', 'm_raug', 'n_raug', 'unlabelled_factor', 'fm_conf_threshold', 'Test Accuracy', 'Test Loss', 'Test f1', 'Test Precision', 'Test Recall']
 
     with open('results_test.csv', 'w') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
@@ -13,14 +13,18 @@ def print_test_summary(path_to_read):
 
         for folder in glob(path_to_read):
             row_to_output = []
-            all_params = folder.split('_')[4:]
-            magnification = all_params[0]
-            unlabeled_amount = all_params[1]
-            dropout_value = all_params[2]
-            weight_decay = all_params[3]
-            learning_rate = all_params[4]
 
-            row_to_output.extend([magnification, unlabeled_amount, dropout_value, weight_decay, learning_rate])
+            all_params = folder.split('_')[2:]
+            seed = all_params[0]
+            magnification = all_params[1]
+            labeled_images = all_params[2]
+            m_raug = all_params[3]
+            n_raug = all_params[4]
+            unlabelled_factor = all_params[5]
+            fm_conf_threshold = all_params[6]
+
+            row_to_output.extend(
+                [seed, magnification, labeled_images, m_raug, n_raug, unlabelled_factor, fm_conf_threshold])
 
             test_file = os.path.join(folder, 'result_outputs', 'test_summary.csv')
 
@@ -33,34 +37,26 @@ def print_test_summary(path_to_read):
 
 
 def print_validation_summary(path_to_read, epoch_amount):
-    columns = ['Magnification', 'Seed', 'Amount of Images', 'Lambda u', 'Dropout', 'Weight Decay', 'Learning Rate',
+    columns = ['Seed', 'Magnification', 'Labeled images', 'm_raug', 'n_raug', 'unlabelled_factor', 'fm_conf_threshold',
                'Train acc', 'Train loss', 'Val acc', 'Val loss', 'Val f1', 'Val Precision', 'Val Recall', 'Epoch']
 
     with open('results_val.csv', 'w') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerow(columns)
 
-        # dict_of_seed = {}
-
-        for folder in glob(path_to_read):
-            all_params = folder.split('_')[3:]
-            seed = all_params[1]
-
-            # temp.append(seed, )
-
-
         for folder in glob(path_to_read):
             row_to_output = []
-            all_params = folder.split('_')[3:]
-            magnification = all_params[0]
-            seed = all_params[1]
-            amount_of_images = all_params[2]
-            lambda_u = all_params[3]
-            dropout = all_params[4]
-            weight_decay = all_params[5]
-            learning_rate = all_params[6]
 
-            row_to_output.extend([magnification, seed, amount_of_images, lambda_u, dropout, weight_decay, learning_rate])
+            all_params = folder.split('_')[2:]
+            seed = all_params[0]
+            magnification = all_params[1]
+            labeled_images = all_params[2]
+            m_raug = all_params[3]
+            n_raug = all_params[4]
+            unlabelled_factor = all_params[5]
+            fm_conf_threshold = all_params[6]
+
+            row_to_output.extend([seed, magnification, labeled_images, m_raug, n_raug, unlabelled_factor, fm_conf_threshold])
 
             val_file = os.path.join(folder, 'result_outputs', 'summary.csv')
 
@@ -75,7 +71,7 @@ def print_validation_summary(path_to_read, epoch_amount):
 
 if __name__ == '__main__':
     path_to_read = './experiments/*'
-    test_summary = False
+    test_summary = True
 
     if test_summary:
         print_test_summary(path_to_read)

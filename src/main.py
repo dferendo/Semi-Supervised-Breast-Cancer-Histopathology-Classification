@@ -13,7 +13,7 @@ import numpy as np
 from torchvision import transforms
 from PIL import Image
 import torch
-from RandAugment import RandAugment
+from rand_augment import RandAugment
 
 from densenet import DenseNet
 
@@ -43,13 +43,39 @@ def get_image_normalization(magnification):
     return normalization_mean, normalization_var
 
 
-def get_transformations(normalization_mean, normalization_var, image_height, image_width):
-    transformations = transforms.Compose([
-        transforms.RandomHorizontalFlip(0.5),
-        transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
-        transforms.ToTensor(),
-        transforms.Normalize(normalization_mean, normalization_var)
-    ])
+def get_transformations(normalization_mean, normalization_var, image_height, image_width, transformations_labeled):
+    transformations = transforms.Compose([])
+
+    if transformations_labeled is not None:
+
+        while len(transformations_labeled) != 0:
+            transformation_to_choice = transformations_labeled.pop(0)
+
+            if transformation_to_choice == 0:
+                prob_parameter = transformations_labeled.pop(0)
+                print('Transformation Added: Horizontal Flip ', prob_parameter)
+
+                transformations.transforms.append(transforms.RandomHorizontalFlip(prob_parameter))
+            elif transformation_to_choice == 1:
+                prob_parameter = transformations_labeled.pop(0)
+                print('Transformation Added: Vertical Flip ', prob_parameter)
+
+                transformations.transforms.append(transforms.RandomVerticalFlip(prob_parameter))
+            elif transformation_to_choice == 2:
+                degrees = transformations_labeled.pop(0)
+                print('Transformation Added: Affine ', degrees)
+
+                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+            elif transformation_to_choice == 3:
+                brightness = transformations_labeled.pop(0)
+                hue = transformations_labeled.pop(0)
+                print('Transformation Added: ColorJitter ', brightness, hue)
+
+                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
+
+    transformations.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
+    transformations.transforms.append(transforms.ToTensor())
+    transformations.transforms.append(transforms.Normalize(normalization_mean, normalization_var))
 
     transformations_test = transforms.Compose([
         transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
@@ -60,32 +86,77 @@ def get_transformations(normalization_mean, normalization_var, image_height, ima
     return transformations, transformations_test
 
 
-def get_unlabeled_transformations(normalization_mean, normalization_var, image_height, image_width, m_raug=None, n_raug=None):
-    transformations_1 = transforms.Compose([
-        transforms.RandomHorizontalFlip(0.5),
-        transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
-        transforms.ToTensor(),
-        transforms.Normalize(normalization_mean, normalization_var)
-    ])
+def get_unlabeled_transformations(normalization_mean, normalization_var, image_height, image_width, m_raug=None, n_raug=None,
+                                  transformations_unlabeled=None, transformation_unlabeled_strong=None):
+    transformations_1 = transforms.Compose([])
 
-    transformations_2 = transforms.Compose([
-        transforms.RandomHorizontalFlip(0.5),
-        transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
-        transforms.ToTensor(),
-        transforms.Normalize(normalization_mean, normalization_var)
-    ])
+    if transformations_unlabeled is not None:
+
+        while len(transformations_unlabeled) != 0:
+            transformation_to_choice = transformations_unlabeled.pop(0)
+
+            if transformation_to_choice == 0:
+                prob_parameter = transformations_unlabeled.pop(0)
+                print('Unlabeled Transformation Added: Horizontal Flip ', prob_parameter)
+
+                transformations_1.transforms.append(transforms.RandomHorizontalFlip(prob_parameter))
+            elif transformation_to_choice == 1:
+                prob_parameter = transformations_unlabeled.pop(0)
+                print('Unlabeled Transformation Added: Vertical Flip ', prob_parameter)
+
+                transformations_1.transforms.append(transforms.RandomVerticalFlip(prob_parameter))
+            elif transformation_to_choice == 2:
+                degrees = transformations_unlabeled.pop(0)
+                print('Unlabeled Transformation Added: Affine ', degrees)
+
+                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+            elif transformation_to_choice == 3:
+                brightness = transformations_unlabeled.pop(0)
+                hue = transformations_unlabeled.pop(0)
+                print('Unlabeled Transformation Added: ColorJitter ', brightness, hue)
+
+                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
+
+    transformations_1.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
+    transformations_1.transforms.append(transforms.ToTensor())
+    transformations_1.transforms.append(transforms.Normalize(normalization_mean, normalization_var))
+
+    transformations_2 = transforms.Compose([])
+
+    if transformation_unlabeled_strong is not None:
+
+        while len(transformation_unlabeled_strong) != 0:
+            transformation_to_choice = transformation_unlabeled_strong.pop(0)
+
+            if transformation_to_choice == 0:
+                prob_parameter = transformation_unlabeled_strong.pop(0)
+                print('Unlabeled Strong Transformation Added: Horizontal Flip ', prob_parameter)
+
+                transformations_2.transforms.append(transforms.RandomHorizontalFlip(prob_parameter))
+            elif transformation_to_choice == 1:
+                prob_parameter = transformation_unlabeled_strong.pop(0)
+                print('Unlabeled Strong Transformation Added: Vertical Flip ', prob_parameter)
+
+                transformations_2.transforms.append(transforms.RandomVerticalFlip(prob_parameter))
+            elif transformation_to_choice == 2:
+                degrees = transformation_unlabeled_strong.pop(0)
+                print('Unlabeled Strong Transformation Added: Affine ', degrees)
+
+                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+            elif transformation_to_choice == 3:
+                brightness = transformation_unlabeled_strong.pop(0)
+                hue = transformation_unlabeled_strong.pop(0)
+                print('Unlabeled Strong Transformation Added: ColorJitter ', brightness, hue)
+
+                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
+
+    transformations_2.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
+    transformations_2.transforms.append(transforms.ToTensor())
+    transformations_2.transforms.append(transforms.Normalize(normalization_mean, normalization_var))
 
     if n_raug is not None and m_raug is not None:
         print('-Doing RandAugment-')
         transformations_2.transforms.insert(1, RandAugment(n=n_raug, m=m_raug))
-
-    # transformations_2 = transforms.Compose([
-    #     transforms.RandomAffine(translate=(0.1, 0.1), degrees=0),
-    #     # transforms.RandomCrop(0.1),
-    #     transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR),
-    #     transforms.ToTensor(),
-    #     transforms.Normalize(normalization_mean, normalization_var)
-    # ])
 
     return [transformations_1, transformations_2]
 
@@ -106,9 +177,11 @@ torch.manual_seed(args.seed)
 # Data Loading
 normalization_mean, normalization_var = get_image_normalization(args.magnification)
 transformations, transformations_test = get_transformations(normalization_mean, normalization_var, args.image_height,
-                                                            args.image_height)
+                                                            args.image_height, args.transformation_labeled_parameters)
 unlabeled_transformations = get_unlabeled_transformations(normalization_mean, normalization_var, args.image_height,
-                                                          args.image_height, m_raug=args.m_raug, n_raug=args.n_raug)
+                                                          args.image_height, m_raug=args.m_raug, n_raug=args.n_raug,
+                                                          transformations_unlabeled=args.transformation_unlabeled_parameters,
+                                                          transformation_unlabeled_strong=args.transformation_unlabeled_strong_parameters)
 
 data_location = os.path.abspath(args.dataset_location)
 
@@ -131,13 +204,15 @@ else:
     print('Binary-class')
     num_output_classes = 2
 
-#(6, 12, 24, 16)
-# (6, 6, 6, 6)
 model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.image_height, args.image_height),
-                 growth_rate=32, block_config=(4, 4, 4, 4), compression=0.5,
-                 num_init_features=args.num_filters, bottleneck_factor=4, drop_rate=args.drop_rate,
+                 growth_rate=args.growth_rate, block_config=args.block_config,
+                 compression=args.compression,
+                 num_init_features=args.initial_num_filters,
+                 bottleneck_factor=args.bottleneck_factor,
+                 drop_rate=args.drop_rate,
                  num_classes=num_output_classes, small_inputs=False, efficient=False,
-                 use_bias=True, use_se=args.use_se, se_reduction=args.se_reduction, increasing_dilation=True)
+                 use_bias=True,
+                 use_se=args.use_se, se_reduction=args.se_reduction, increasing_dilation=True)
 #
 # from torchvision import models
 # import torch.nn as nn
