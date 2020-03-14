@@ -49,7 +49,7 @@ python ../../src/main.py \
         \
         --magnification "${2}" \
         --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
-        --experiment_name "${6}" \
+        --experiment_name "${7}" \
         --multi_class "False" \
         --labelled_images_amount ${3} \
         \
@@ -69,8 +69,8 @@ python ../../src/main.py \
         --loss_lambda_u 1 \
         \
         --use_fix_match "True" \
-        --n_raug ${5} \
-        --m_raug ${4} \
+        --n_raug 1 \
+        --m_raug 10 \
         --unlabelled_factor 3 \
         --fm_conf_threshold 0.85 \
         \
@@ -81,8 +81,8 @@ python ../../src/main.py \
         --sched_type "FixMatchCos" \
         --learn_rate_max 0.001 \
         --drop_rate 0 \
-        --transformation_labeled_parameters "0, 0.5" \
-        --transformation_unlabeled_parameters "0, 0.5" \
-        --transformation_unlabeled_strong_parameters "0, 0.5" \
+        --transformation_labeled_parameters "${4}" \
+        --transformation_unlabeled_parameters "${5}" \
+        --transformation_unlabeled_strong_parameters "${6}" \
 
 # --pretrained_weights_locations "../Autoencoder/experiments/autoencoder_test_40X_0/saved_models"
