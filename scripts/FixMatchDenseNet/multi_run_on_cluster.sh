@@ -19,25 +19,13 @@ do
   do
     for labeled_images in "${labeled_images_amount[@]}"
     do
-      for m_raug in "${m_raugs[@]}"
+      for index in "${!transformation_labeled_parameters[@]}"
       do
-        for n_raug in "${n_raugs[@]}"
-        do
-          for unlabelled_factor in "${unlabelled_factors[@]}"
-          do
-            for fm_conf_threshold in "${fm_conf_thresholds[@]}"
-            do
-              for index in "${!transformation_labeled_parameters[@]}"
-              do
-                experiment_result_location="./experiments/fixmatch_rotations_${seed}_${magnification}_${labeled_images}_${transformation_labeled_parameters[$index]}_${transformation_unlabeled_parameters[$index]}_${transformation_unlabeled_strong_parameters[$index]}"
+        experiment_result_location="./experiments/fixmatch_rotations_${seed}_${magnification}_${labeled_images}_${transformation_labeled_parameters[$index]}_${transformation_unlabeled_parameters[$index]}_${transformation_unlabeled_strong_parameters[$index]}"
 
-                if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
-                  sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} "${transformation_labeled_parameters[$index]}" "${transformation_unlabeled_parameters[$index]}" "${transformation_unlabeled_strong_parameters[$index]}" ${experiment_result_location}
-                fi
-              done
-            done
-          done
-        done
+        if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
+          sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} "${transformation_labeled_parameters[$index]}" "${transformation_unlabeled_parameters[$index]}" "${transformation_unlabeled_strong_parameters[$index]}" ${experiment_result_location}
+        fi
       done
     done
   done
