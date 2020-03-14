@@ -13,7 +13,7 @@ import numpy as np
 from torchvision import transforms
 from PIL import Image
 import torch
-from RandAugment import RandAugment
+from rand_augment import RandAugment
 
 from densenet import DenseNet
 
