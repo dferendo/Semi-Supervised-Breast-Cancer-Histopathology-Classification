@@ -78,7 +78,11 @@ do
               --learn_rate_max ${learning_rate} \
               --drop_rate ${dropout} \
               \
-              --transformation_labeled_parameters "0, 0.5, 1, 0.5"
+              --transformation_labeled_parameters "0, 0.5, 1, 0.5" \
+              --transformation_unlabeled_parameters "0, 0.5, 1, 0.5" \
+              --transformation_unlabeled_strong_parameters "0, 0.5, 1, 0.5" \
+
+
 #                        --pretrained_weights_locations "../Autoencoder/experiments/autoencoder_test_40X_0/saved_models"
     done
   done
