@@ -8,10 +8,10 @@ loss_lambda_u=1
 seeds=(9392 342432 764365)
 magnifications=("40X")
 labeled_images_amount=(5)
-m_raugs=(5 10 15)
-n_raugs=(1 2 3)
-unlabelled_factors=(1 2 3)
-fm_conf_thresholds=(0.95 0.9 0.8)
+m_raugs=(5 10)
+n_raugs=(1 3)
+unlabelled_factors=(1 3)
+fm_conf_thresholds=(0.95 0.85)
 
 for seed in "${seeds[@]}"
 do
