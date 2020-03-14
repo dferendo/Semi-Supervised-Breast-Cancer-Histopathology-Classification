@@ -33,34 +33,29 @@ def print_test_summary(path_to_read):
 
 
 def print_validation_summary(path_to_read, epoch_amount):
-    columns = ['Magnification', 'Seed', 'Amount of Images', 'Lambda u', 'Dropout', 'Weight Decay', 'Learning Rate',
+    columns = ['Seed', 'Block config', 'Number of filters', 'Growth Rate', 'Magnification', 'Amount of Images', 'Dropout', 'Weight Decay', 'Learning Rate', 'use_se',
                'Train acc', 'Train loss', 'Val acc', 'Val loss', 'Val f1', 'Val Precision', 'Val Recall', 'Epoch']
 
     with open('results_val.csv', 'w') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerow(columns)
 
-        # dict_of_seed = {}
-
-        for folder in glob(path_to_read):
-            all_params = folder.split('_')[3:]
-            seed = all_params[1]
-
-            # temp.append(seed, )
-
-
         for folder in glob(path_to_read):
             row_to_output = []
-            all_params = folder.split('_')[3:]
-            magnification = all_params[0]
-            seed = all_params[1]
-            amount_of_images = all_params[2]
-            lambda_u = all_params[3]
-            dropout = all_params[4]
-            weight_decay = all_params[5]
-            learning_rate = all_params[6]
 
-            row_to_output.extend([magnification, seed, amount_of_images, lambda_u, dropout, weight_decay, learning_rate])
+            all_params = folder.split('_')[2:]
+            seed = all_params[0]
+            block_config = all_params[1]
+            number_of_filters = all_params[2]
+            growth_rate = all_params[3]
+            magnification = all_params[4]
+            labeled_images = all_params[5]
+            dropout = all_params[6]
+            weight_decay = all_params[7]
+            learning_rate = all_params[8]
+            use_se = all_params[9]
+
+            row_to_output.extend([seed, block_config.replace(',', '-'), number_of_filters, growth_rate, magnification, labeled_images, dropout, weight_decay, learning_rate, use_se])
 
             val_file = os.path.join(folder, 'result_outputs', 'summary.csv')
 
