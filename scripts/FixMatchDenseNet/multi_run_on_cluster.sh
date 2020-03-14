@@ -24,7 +24,7 @@ do
         experiment_result_location="./experiments/fixmatch_rotations_${seed}_${magnification}_${labeled_images}_${transformation_labeled_parameters[$index]}_${transformation_unlabeled_parameters[$index]}_${transformation_unlabeled_strong_parameters[$index]}"
 
         if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
-          sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} "${transformation_labeled_parameters[$index]}" "${transformation_unlabeled_parameters[$index]}" "${transformation_unlabeled_strong_parameters[$index]}" ${experiment_result_location}
+          sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} "${transformation_labeled_parameters[$index]}" "${transformation_unlabeled_parameters[$index]}" "${transformation_unlabeled_strong_parameters[$index]}" "${experiment_result_location}"
         fi
       done
     done
