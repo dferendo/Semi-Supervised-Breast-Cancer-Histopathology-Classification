@@ -109,13 +109,13 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
                 degrees = transformations_unlabeled.pop(0)
                 print('Unlabeled Transformation Added: Affine ', degrees)
 
-                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+                transformations_1.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
             elif transformation_to_choice == 3:
                 brightness = transformations_unlabeled.pop(0)
                 hue = transformations_unlabeled.pop(0)
                 print('Unlabeled Transformation Added: ColorJitter ', brightness, hue)
 
-                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
+                transformations_1.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
 
     transformations_1.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
     transformations_1.transforms.append(transforms.ToTensor())
@@ -142,13 +142,13 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
                 degrees = transformation_unlabeled_strong.pop(0)
                 print('Unlabeled Strong Transformation Added: Affine ', degrees)
 
-                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+                transformations_2.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
             elif transformation_to_choice == 3:
                 brightness = transformation_unlabeled_strong.pop(0)
                 hue = transformation_unlabeled_strong.pop(0)
                 print('Unlabeled Strong Transformation Added: ColorJitter ', brightness, hue)
 
-                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
+                transformations_2.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
 
     transformations_2.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
     transformations_2.transforms.append(transforms.ToTensor())
