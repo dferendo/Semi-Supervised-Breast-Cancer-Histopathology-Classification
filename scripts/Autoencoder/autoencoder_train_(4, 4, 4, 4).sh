@@ -3,7 +3,7 @@
 export DATASET_DIR="../../data/BreaKHis_v1/"
 
 magnifications=("40X")
-use_ses=("False")
+use_ses=("True")
 seeds=(9392)
 
 for seed in "${seeds[@]}"
@@ -43,7 +43,8 @@ do
             --optim_type "Adam" \
             --momentum 0.9 \
             --sched_type "Cos" \
-            --drop_rate 0
+            --drop_rate 0 \
+            --pretrained_weights_locations "./1layer_dilation_lrelucbam_2exc_noaug_lrelu_1bn_autoencoder_test_(4,4,4,4)_40X_True/saved_models/"
 
             #            --increase_dilation_per_layer "True" \
             #            --val_size 0.2 \

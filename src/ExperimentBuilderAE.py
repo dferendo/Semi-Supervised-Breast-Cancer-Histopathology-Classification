@@ -23,7 +23,7 @@ import math
 class ExperimentBuilder(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data,
                  test_data, use_gpu, continue_from_epoch=-1,
-                 scheduler=None, optimiser=None, sched_params=None, optim_params=None):
+                 scheduler=None, optimiser=None, sched_params=None, optim_params=None, pretrained_weights_locations=None):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -149,6 +149,16 @@ class ExperimentBuilder(nn.Module):
         else:
             self.starting_epoch = 0
             self.state = dict()
+
+        if pretrained_weights_locations is not None:
+            self.load_pre_trained_model(model_save_dir=pretrained_weights_locations,
+                                        model_save_name="train_model",
+                                        model_idx='best')
+
+    def load_pre_trained_model(self, model_save_dir, model_save_name, model_idx):
+        state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))
+
+        self.load_state_dict(state_dict=state['network'])
 
     def get_num_parameters(self):
         total_num_params = 0

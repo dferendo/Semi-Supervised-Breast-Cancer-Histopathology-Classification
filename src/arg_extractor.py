@@ -122,6 +122,7 @@ def get_shared_arguments():
                         help='Which transformation to use and and the parameters of the transformation')
     parser.add_argument('--transformation_unlabeled_strong_parameters', nargs="?", type=strToArray, default=None,
                         help='Which transformation to use and and the parameters of the transformation')
+
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
 

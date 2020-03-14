@@ -12,6 +12,7 @@ from DenseNetParameters import DenseNetParameters
 from AutoEncoder import Autoencoder
 from ExperimentBuilderAE import ExperimentBuilder
 from DataLoading import get_datasets, DataParameters
+import matplotlib.pyplot as plt
 
 
 def get_image_normalization(magnification):
@@ -114,6 +115,65 @@ bhc_experiment = ExperimentBuilder(network_model=model,
                                    optimiser=args.optim_type,
                                    optim_params=optimizer_params,
                                    scheduler=args.sched_type,
-                                   sched_params=scheduler_params)
+                                   sched_params=scheduler_params,
+                                   pretrained_weights_locations=args.pretrained_weights_locations)
 
-experiment_metrics = bhc_experiment.run_experiment()
+
+if args.pretrained_weights_locations is None:
+    experiment_metrics = bhc_experiment.run_experiment()
+else:
+    next(iter(train_loader))
+    x, x_with_noise = next(iter(train_loader))
+
+    image = x.to(device)
+    image_with_noise = x_with_noise.to(device)
+
+    out = bhc_experiment.model.forward(image_with_noise)  # forward the data in the model
+
+    for i in range(0, out.size(0)):
+        # Output
+        out_image = out[i].detach().cpu()
+        x = image[i].cpu()
+
+        norm_mean = torch.Tensor(3, out.size(2), out.size(3))
+
+        norm_mean[0] = normalization_mean[0]
+        norm_mean[1] = normalization_mean[1]
+        norm_mean[2] = normalization_mean[2]
+
+        norm_var = torch.Tensor(3, out.size(2), out.size(3))
+
+        norm_var[0] = normalization_var[0]
+        norm_var[1] = normalization_var[1]
+        norm_var[2] = normalization_var[2]
+
+        out_image = (out_image * norm_var) + norm_mean
+        x = (x * norm_var) + norm_mean
+
+        x = x.permute(1, 2, 0)
+        y = out_image.permute(1, 2, 0)
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(1, 2, 1)
+        ax1.imshow(x)
+        ax2 = fig.add_subplot(1, 2, 2)
+        ax2.imshow(y)
+
+        plt.show()
+
+        fig_size = (6, 3)  # Set figure size in inches (width, height)
+        fig = plt.figure(figsize=fig_size)  # Create a new figure object
+        ax = fig.add_subplot(1, 1, 1)
+        ax.imshow(x)
+        fig.tight_layout()  # This minimises whitespace around the axes.
+        fig.savefig(f'images/X - {i}.pdf')  # Save figure to current directory in PDF format
+
+
+        fig_size = (6, 3)  # Set figure size in inches (width, height)
+        fig = plt.figure(figsize=fig_size)  # Create a new figure object
+        ax = fig.add_subplot(1, 1, 1)
+        ax.imshow(y)
+        fig.tight_layout()  # This minimises whitespace around the axes.
+        fig.savefig(f'images/Y - {i}.pdf')  # Save figure to current directory in PDF format
+
+        plt.close()
