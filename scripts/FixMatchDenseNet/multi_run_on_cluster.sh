@@ -8,10 +8,10 @@ loss_lambda_u=1
 seeds=(9392 342432 764365)
 magnifications=("40X")
 labeled_images_amount=(5)
-m_raugs=(10)
-n_raugs=(1)
-unlabelled_factors=(4 5)
-fm_conf_thresholds=(0.85)
+
+transformation_labeled_parameters=("0, 0.5, 1, 0.5" "0, 0.5, 1, 0.5, 2, 20" "0, 0.5, 1, 0.5, 3, 0.1, 0.1" "0, 0.5, 1, 0.5, 2, 20, 3, 0.1, 0.1")
+transformation_unlabeled_parameters=("0, 0.5" "0, 0.5" "0, 0.5" "0, 0.5")
+transformation_unlabeled_strong_parameters=("0, 0.5" "0, 0.5" "0, 0.5" "0, 0.5")
 
 for seed in "${seeds[@]}"
 do
@@ -27,11 +27,14 @@ do
           do
             for fm_conf_threshold in "${fm_conf_thresholds[@]}"
             do
-              experiment_result_location="./experiments/fixmatch_rotations_${seed}_${magnification}_${labeled_images}_${m_raug}_${n_raug}_${unlabelled_factor}_${fm_conf_threshold}"
+              for index in "${!transformation_labeled_parameters[@]}"
+              do
+                experiment_result_location="./experiments/fixmatch_rotations_${seed}_${magnification}_${labeled_images}_${transformation_labeled_parameters[$index]}_${transformation_unlabeled_parameters[$index]}_${transformation_unlabeled_strong_parameters[$index]}"
 
-              if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
-                sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} ${m_raug} ${n_raug} ${unlabelled_factor} ${fm_conf_threshold} ${experiment_result_location}
-              fi
+                if [ ! -f "${experiment_result_location}/result_outputs/test_summary.csv" ]; then
+                  sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} "${transformation_labeled_parameters[$index]}" "${transformation_unlabeled_parameters[$index]}" "${transformation_unlabeled_strong_parameters[$index]}" ${experiment_result_location}
+                fi
+              done
             done
           done
         done

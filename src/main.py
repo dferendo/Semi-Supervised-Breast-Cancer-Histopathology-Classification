@@ -61,6 +61,17 @@ def get_transformations(normalization_mean, normalization_var, image_height, ima
                 print('Transformation Added: Vertical Flip ', prob_parameter)
 
                 transformations.transforms.append(transforms.RandomVerticalFlip(prob_parameter))
+            elif transformation_to_choice == 2:
+                degrees = transformations_labeled.pop(0)
+                print('Transformation Added: Affine ', degrees)
+
+                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+            elif transformation_to_choice == 3:
+                brightness = transformations_labeled.pop(0)
+                hue = transformations_labeled.pop(0)
+                print('Transformation Added: ColorJitter ', brightness, hue)
+
+                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
 
     transformations.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
     transformations.transforms.append(transforms.ToTensor())
@@ -94,6 +105,17 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
                 print('Unlabeled Transformation Added: Vertical Flip ', prob_parameter)
 
                 transformations_1.transforms.append(transforms.RandomVerticalFlip(prob_parameter))
+            elif transformation_to_choice == 2:
+                degrees = transformations_unlabeled.pop(0)
+                print('Unlabeled Transformation Added: Affine ', degrees)
+
+                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+            elif transformation_to_choice == 3:
+                brightness = transformations_unlabeled.pop(0)
+                hue = transformations_unlabeled.pop(0)
+                print('Unlabeled Transformation Added: ColorJitter ', brightness, hue)
+
+                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
 
     transformations_1.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
     transformations_1.transforms.append(transforms.ToTensor())
@@ -116,6 +138,17 @@ def get_unlabeled_transformations(normalization_mean, normalization_var, image_h
                 print('Unlabeled Strong Transformation Added: Vertical Flip ', prob_parameter)
 
                 transformations_2.transforms.append(transforms.RandomVerticalFlip(prob_parameter))
+            elif transformation_to_choice == 2:
+                degrees = transformation_unlabeled_strong.pop(0)
+                print('Unlabeled Strong Transformation Added: Affine ', degrees)
+
+                transformations.transforms.append(transforms.RandomAffine(degrees=degrees, translate=(0.1, 0.1)))
+            elif transformation_to_choice == 3:
+                brightness = transformation_unlabeled_strong.pop(0)
+                hue = transformation_unlabeled_strong.pop(0)
+                print('Unlabeled Strong Transformation Added: ColorJitter ', brightness, hue)
+
+                transformations.transforms.append(transforms.ColorJitter(brightness=brightness, hue=hue))
 
     transformations_2.transforms.append(transforms.Resize((image_height, image_width), interpolation=Image.BILINEAR))
     transformations_2.transforms.append(transforms.ToTensor())

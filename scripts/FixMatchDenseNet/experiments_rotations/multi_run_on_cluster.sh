@@ -10,7 +10,7 @@ magnifications=("40X")
 labeled_images_amount=(5)
 m_raugs=(5 10)
 n_raugs=(1 3)
-unlabelled_factors=(1 3)
+unlabelled_factors=(1 3 4 5)
 fm_conf_thresholds=(0.95 0.85)
 
 for seed in "${seeds[@]}"

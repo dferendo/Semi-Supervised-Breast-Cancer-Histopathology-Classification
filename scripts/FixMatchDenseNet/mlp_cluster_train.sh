@@ -42,14 +42,14 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
 python ../../src/main.py \
         --use_gpu "True" \
-        --batch_size 10 \
-        --num_epochs 100 \
+        --batch_size 15 \
+        --num_epochs 200 \
         --continue_from_epoch -1 \
         --seed ${1} \
         \
         --magnification "${2}" \
         --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
-        --experiment_name "${8}" \
+        --experiment_name "${7}" \
         --multi_class "False" \
         --labelled_images_amount ${3} \
         \
@@ -69,10 +69,10 @@ python ../../src/main.py \
         --loss_lambda_u 1 \
         \
         --use_fix_match "True" \
-        --n_raug ${5} \
-        --m_raug ${4} \
-        --unlabelled_factor ${6} \
-        --fm_conf_threshold ${7} \
+        --n_raug 1 \
+        --m_raug 10 \
+        --unlabelled_factor 3 \
+        --fm_conf_threshold 0.85 \
         \
         --optim_type "SGD" \
         --momentum 0.9 \
@@ -81,8 +81,8 @@ python ../../src/main.py \
         --sched_type "FixMatchCos" \
         --learn_rate_max 0.001 \
         --drop_rate 0 \
-        --transformation_labeled_parameters "0, 0.5" \
-        --transformation_unlabeled_parameters "0, 0.5" \
-        --transformation_unlabeled_strong_parameters "0, 0.5" \
+        --transformation_labeled_parameters "${4}" \
+        --transformation_unlabeled_parameters "${5}" \
+        --transformation_unlabeled_strong_parameters "${6}" \
 
 # --pretrained_weights_locations "../Autoencoder/experiments/autoencoder_test_40X_0/saved_models"

@@ -71,7 +71,7 @@ def print_validation_summary(path_to_read, epoch_amount):
 
 if __name__ == '__main__':
     path_to_read = './experiments/*'
-    test_summary = False
+    test_summary = True
 
     if test_summary:
         print_test_summary(path_to_read)
