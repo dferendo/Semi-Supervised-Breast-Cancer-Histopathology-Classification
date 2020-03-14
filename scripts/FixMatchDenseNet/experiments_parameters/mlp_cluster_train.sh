@@ -47,40 +47,40 @@ python ../../src/main.py \
         --continue_from_epoch -1 \
         --seed ${1} \
         \
-        --magnification "${2}" \
+        --magnification "${5}" \
         --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
-        --experiment_name "${8}" \
+        --experiment_name "${11}" \
         --multi_class "False" \
-        --labelled_images_amount ${3} \
+        --labelled_images_amount ${6} \
         \
         --image_num_channels 3 \
         --image_height 224 \
         --image_width 224 \
         \
-        --block_config "4, 4, 4, 4" \
-        --initial_num_filters 64 \
-        --growth_rate 32 \
+        --block_config "${2}" \
+        --initial_num_filters ${3} \
+        --growth_rate ${4} \
         --compression 0.5 \
         --bottleneck_factor 4 \
-        --use_se "True" \
+        --use_se "${10}" \
         --se_reduction 16 \
         \
         --use_mix_match "False" \
         --loss_lambda_u 1 \
         \
         --use_fix_match "True" \
-        --n_raug ${5} \
-        --m_raug ${4} \
-        --unlabelled_factor ${6} \
-        --fm_conf_threshold ${7} \
+        --n_raug 3 \
+        --m_raug 10 \
+        --unlabelled_factor 1 \
+        --fm_conf_threshold 0.95 \
         \
         --optim_type "SGD" \
         --momentum 0.9 \
         --nesterov "True" \
-        --weight_decay_coefficient 0.000001 \
+        --weight_decay_coefficient ${8} \
         --sched_type "FixMatchCos" \
-        --learn_rate_max 0.001 \
-        --drop_rate 0 \
+        --learn_rate_max ${9} \
+        --drop_rate ${7} \
         --transformation_labeled_parameters "0, 0.5" \
         --transformation_unlabeled_parameters "0, 0.5" \
         --transformation_unlabeled_strong_parameters "0, 0.5" \
