@@ -42,7 +42,7 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
 python ../../src/main.py \
         --use_gpu "True" \
-        --batch_size 10 \
+        --batch_size 15 \
         --num_epochs 100 \
         --continue_from_epoch -1 \
         --seed ${1} \
