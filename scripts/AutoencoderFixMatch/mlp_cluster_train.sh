@@ -43,13 +43,13 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 python ../../src/main.py \
         --use_gpu "True" \
         --batch_size 15 \
-        --num_epochs 200 \
+        --num_epochs 300 \
         --continue_from_epoch -1 \
         --seed ${1} \
         \
         --magnification "${2}" \
         --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
-        --experiment_name "${7}" \
+        --experiment_name "${8}" \
         --multi_class "False" \
         --labelled_images_amount ${3} \
         \
@@ -72,7 +72,7 @@ python ../../src/main.py \
         --n_raug 3 \
         --m_raug 5 \
         --unlabelled_factor 3 \
-        --fm_conf_threshold 0.85 \
+        --fm_conf_threshold ${7} \
         \
         --optim_type "SGD" \
         --momentum 0.9 \
@@ -85,4 +85,6 @@ python ../../src/main.py \
         --transformation_labeled_parameters "0, 0.5" \
         --transformation_unlabeled_parameters "0, 0.5" \
         --transformation_unlabeled_strong_parameters "0, 0.5" \
-        --pretrained_weights_locations "../Autoencoder/1layer_dilation_lrelucbam_2exc_noaug_lrelu_1bn_autoencoder_test_(4,4,4,4)_40X_True/saved_models"
+        \
+        --pretrained_weights_locations "../Autoencoder/1layer_dilation_lrelucbam_2exc_noaug_lrelu_1bn_autoencoder_test_(4,4,4,4)_40X_True/saved_models" \
+        --fine_tune "True"
