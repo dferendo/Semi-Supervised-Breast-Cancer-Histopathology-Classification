@@ -2,9 +2,6 @@
 
 export DATASET_DIR="../../data/BreaKHis_v1/"
 
-loss_lambda_u=1
-
-
 seeds=(4545 342432 764365)
 magnifications=("40X")
 labeled_images_amount=(5)
