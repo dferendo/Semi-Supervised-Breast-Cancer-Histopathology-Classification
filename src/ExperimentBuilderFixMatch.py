@@ -23,7 +23,8 @@ class ExperimentBuilderFixMatch(nn.Module):
     def __init__(self, network_model, experiment_name, num_epochs, train_data, val_data, train_data_unlabeled,
                  test_data, use_gpu, continue_from_epoch=-1,
                  scheduler=None, optimiser=None, sched_params=None, optim_params=None,
-                 threshold=None, lambda_u=None, pretrained_weights_locations=None):
+                 threshold=None, lambda_u=None, pretrained_weights_locations=None,
+                 fine_tune_list=None):
         """
         Initializes an ExperimentBuilder object. Such an object takes care of running training and evaluation of a deep net
         on a given dataset. It also takes care of saving per epoch models and automatically inferring the best val model
@@ -43,6 +44,14 @@ class ExperimentBuilderFixMatch(nn.Module):
         self.model = network_model
         # self.model.reset_parameters()
         self.device = torch.cuda.current_device()
+
+        if pretrained_weights_locations is not None:
+            self.load_pre_trained_model(model_save_dir=pretrained_weights_locations,
+                                        model_save_name="train_model",
+                                        model_idx='best')
+
+        if fine_tune_list is not None:
+            self.freeze_weights(fine_tune_name_list=fine_tune_list)
 
         if torch.cuda.device_count() > 1 and use_gpu:
             self.device = torch.cuda.current_device()
@@ -95,7 +104,7 @@ class ExperimentBuilderFixMatch(nn.Module):
         elif scheduler == 'Cos':
             self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer,
                                                                   T_max=num_epochs,
-                                                                  eta_min=0.00001)
+                                                                  eta_min=sched_params['lr_min'])
         elif scheduler == 'FixMatchCos':
             self.scheduler = WarmupCosineLrScheduler(self.optimizer, max_iter=num_epochs*len(train_data), warmup_iter=0)
         else:
@@ -135,11 +144,6 @@ class ExperimentBuilderFixMatch(nn.Module):
 
         if not os.path.exists(self.experiment_saved_models):
             os.mkdir(self.experiment_saved_models)  # create the experiment saved models directory
-
-        if pretrained_weights_locations is not None:
-            self.load_pre_trained_model(model_save_dir=pretrained_weights_locations,
-                                        model_save_name="train_model",
-                                        model_idx='best')
 
         self.num_epochs = num_epochs
         # self.criterion = nn.CrossEntropyLoss().to(self.device)  # send the loss computation to the GPU
@@ -355,6 +359,17 @@ class ExperimentBuilderFixMatch(nn.Module):
         state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))
         self.load_state_dict(state_dict=state['network'])
         return state['best_val_model_idx'], state['best_val_model_acc'], state
+
+    def freeze_weights(self, fine_tune_name_list):
+        print('-Freezing Weights-')
+        for name, param in self.model.named_parameters():
+            fine_tune = False
+            for keep in fine_tune_name_list:
+                if keep in name:
+                    fine_tune = True
+            if not fine_tune:
+                print('Froze', name)
+                param.requires_grad = False
 
     def load_pre_trained_model(self, model_save_dir, model_save_name, model_idx):
         state = torch.load(f=os.path.join(model_save_dir, "{}_{}".format(model_save_name, str(model_idx))))

@@ -441,7 +441,6 @@ class DenseNet(nn.Module):
 
             self.layer_dict['final_classifier'] = nn.Linear(out.shape[1], self.num_classes)
             out = self.layer_dict['final_classifier'].forward(out)
-
         return out
 
     def forward(self, x):

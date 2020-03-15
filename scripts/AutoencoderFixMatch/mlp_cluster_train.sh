@@ -78,8 +78,9 @@ python ../../src/main.py \
         --momentum 0.9 \
         --nesterov "True" \
         --weight_decay_coefficient ${4} \
-        --sched_type "FixMatchCos" \
+        --sched_type "Cos" \
         --learn_rate_max ${5} \
+        --learn_rate_min 0.0000001 \
         --drop_rate 0 \
         --transformation_labeled_parameters "0, 0.5" \
         --transformation_unlabeled_parameters "0, 0.5" \

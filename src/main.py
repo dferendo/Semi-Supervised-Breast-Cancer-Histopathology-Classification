@@ -274,6 +274,12 @@ elif args.use_mix_match:
                                                lambda_u=args.loss_lambda_u)
 elif args.use_fix_match:
     print('Fix Match')
+
+    fine_list = None
+    if args.fine_tune:
+        fine_list = ['denseblock_4', 'final_bn', 'final_classifier']
+        # fine_list = ['final_bn', 'final_classifier']
+
     bhc_experiment = ExperimentBuilderFixMatch(network_model=model,
                                                use_gpu=args.use_gpu,
                                                experiment_name=args.experiment_name,
@@ -289,6 +295,7 @@ elif args.use_fix_match:
                                                train_data_unlabeled=train_unlabeled_loader,
                                                lambda_u=args.loss_lambda_u,
                                                threshold=args.fm_conf_threshold,
-                                               pretrained_weights_locations=args.pretrained_weights_locations)
+                                               pretrained_weights_locations=args.pretrained_weights_locations,
+                                               fine_tune_list=fine_list)
 
 experiment_metrics, test_metrics = bhc_experiment.run_experiment()
