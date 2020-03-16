@@ -153,6 +153,8 @@ else:
         x = x.permute(1, 2, 0)
         y = out_image.permute(1, 2, 0)
 
+        print(x.size(), y.size())
+
         fig = plt.figure()
         ax1 = fig.add_subplot(1, 2, 1)
         ax1.imshow(x)
