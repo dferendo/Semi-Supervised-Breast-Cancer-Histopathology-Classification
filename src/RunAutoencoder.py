@@ -168,7 +168,7 @@ else:
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         fig.tight_layout()  # This minimises whitespace around the axes.
-        fig.savefig(f'images/X - {i}.pdf')  # Save figure to current directory in PDF format
+        fig.savefig(f'images/X - {i}.pdf', bbox_inches='tight')  # Save figure to current directory in PDF format
 
 
         fig_size = (6, 3)  # Set figure size in inches (width, height)
@@ -178,6 +178,6 @@ else:
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         fig.tight_layout()  # This minimises whitespace around the axes.
-        fig.savefig(f'images/Y - {i}.pdf')  # Save figure to current directory in PDF format
+        fig.savefig(f'images/Y - {i}.pdf', bbox_inches='tight')  # Save figure to current directory in PDF format
 
         plt.close()
