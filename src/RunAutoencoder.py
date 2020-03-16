@@ -165,6 +165,8 @@ else:
         fig = plt.figure(figsize=fig_size)  # Create a new figure object
         ax = fig.add_subplot(1, 1, 1)
         ax.imshow(x)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
         fig.tight_layout()  # This minimises whitespace around the axes.
         fig.savefig(f'images/X - {i}.pdf')  # Save figure to current directory in PDF format
 
@@ -173,6 +175,8 @@ else:
         fig = plt.figure(figsize=fig_size)  # Create a new figure object
         ax = fig.add_subplot(1, 1, 1)
         ax.imshow(y)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
         fig.tight_layout()  # This minimises whitespace around the axes.
         fig.savefig(f'images/Y - {i}.pdf')  # Save figure to current directory in PDF format
 
