@@ -18,13 +18,12 @@ def print_test_summary(path_to_read):
             seed = all_params[0]
             magnification = all_params[1]
             labeled_images = all_params[2]
-            m_raug = all_params[3]
-            n_raug = all_params[4]
-            unlabelled_factor = all_params[5]
+            weight_decay_value = all_params[3]
+            learning_rate = all_params[4]
+            loss_lambda_u = all_params[5]
             fm_conf_threshold = all_params[6]
 
-            row_to_output.extend(
-                [seed, magnification, labeled_images, m_raug, n_raug, unlabelled_factor, fm_conf_threshold])
+            row_to_output.extend([seed, magnification, labeled_images, weight_decay_value, learning_rate, loss_lambda_u, fm_conf_threshold])
 
             test_file = os.path.join(folder, 'result_outputs', 'test_summary.csv')
 
@@ -37,7 +36,7 @@ def print_test_summary(path_to_read):
 
 
 def print_validation_summary(path_to_read, epoch_amount):
-    columns = ['Seed', 'Magnification', 'Labeled images', 'm_rang', 'n_rang',
+    columns = ['Seed', 'Magnification', 'Labeled images', 'weight_decay_value', 'learning_rate', 'loss_lambda_u', 'fm_conf_threshold',
                'Train acc', 'Train loss', 'Val acc', 'Val loss', 'Val f1', 'Val Precision', 'Val Recall', 'Epoch']
 
     with open('results_val.csv', 'w') as csv_file:
@@ -51,10 +50,13 @@ def print_validation_summary(path_to_read, epoch_amount):
             seed = all_params[0]
             magnification = all_params[1]
             labeled_images = all_params[2]
-            m_rang = all_params[3]
-            n_rang = all_params[4]
+            weight_decay_value = all_params[3]
+            learning_rate = all_params[4]
+            loss_lambda_u = all_params[5]
+            fm_conf_threshold = all_params[6]
 
-            row_to_output.extend([seed, magnification, labeled_images, m_rang, n_rang])
+            row_to_output.extend([seed, magnification, labeled_images, weight_decay_value, learning_rate, loss_lambda_u,
+                                  fm_conf_threshold])
 
             val_file = os.path.join(folder, 'result_outputs', 'summary.csv')
 
