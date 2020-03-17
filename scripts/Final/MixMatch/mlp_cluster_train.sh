@@ -40,7 +40,7 @@ export DATASET_DIR=${TMP}/datasets
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
-python ../../../src/RunAutoencoder.py \
+python ../../../src/main.py \
           --seed ${1} \
           --num_epochs 100 \
           --experiment_name "${4}" \
