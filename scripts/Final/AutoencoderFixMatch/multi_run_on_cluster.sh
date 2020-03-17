@@ -16,7 +16,7 @@ do
     for labeled_images in "${labeled_images_amount[@]}"
     do
       magnification=${magnifications[$index]}
-      autoencoder_location=${autoencoder_locations[$index}
+      autoencoder_location=${autoencoder_locations[$index]}
       experiment_result_location="./experiments/autoencoderfixmatch_${seed}_${magnification}_${labeled_images}_${autoencoder_location}"
 
       sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} "${autoencoder_location}" "${experiment_result_location}"
