@@ -2,7 +2,7 @@
 
 seeds=(4324 342432 764365)
 magnifications=("40X" "100X" "200X" "400X")
-labeled_images_amount=(2 5 10 20 50)
+labeled_images_amount=(5 10 20 50)
 
 for seed in "${seeds[@]}"
 do
