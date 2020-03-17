@@ -10,7 +10,7 @@ do
   do
     for labeled_images in "${labeled_images_amount[@]}"
     do
-      experiment_result_location="./experiments/autoencoder_${seed}_${magnification}_${labeled_images}"
+      experiment_result_location="./experiments/mixmatch_${seed}_${magnification}_${labeled_images}"
 
       sbatch mlp_cluster_train.sh ${seed} "${magnification}" ${labeled_images} "${experiment_result_location}"
     done
