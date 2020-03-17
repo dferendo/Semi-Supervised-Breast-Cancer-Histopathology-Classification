@@ -47,7 +47,7 @@ python ../../../src/main.py \
           --use_gpu "True" \
           --continue_from_epoch -1 \
           \
-          --batch_size 20 \
+          --batch_size 10 \
           --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
           --magnification ${2} \
           --multi_class "False" \

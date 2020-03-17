@@ -6,7 +6,7 @@ autoencoder_locations=("../Autoencoder/experiments/autoencoder_342432_40X/saved_
                        "../Autoencoder/experiments/autoencoder_4324_100X/saved_models/" \
                        "../Autoencoder/experiments/autoencoder_764365_200X/saved_models/" \
                        "../Autoencoder/experiments/autoencoder_342432_400X/saved_models/")
-                       
+
 labeled_images_amount=(5 10 20 50)
 
 for seed in "${seeds[@]}"
