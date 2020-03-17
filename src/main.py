@@ -212,7 +212,7 @@ model = DenseNet(input_shape=(args.batch_size, args.image_num_channels, args.ima
                  drop_rate=args.drop_rate,
                  num_classes=num_output_classes, small_inputs=False, efficient=False,
                  use_bias=True,
-                 use_se=args.use_se, se_reduction=args.se_reduction, increasing_dilation=True)
+                 use_se=args.use_se, se_reduction=args.se_reduction, increasing_dilation=args.increase_dilation)
 #
 # from torchvision import models
 # import torch.nn as nn

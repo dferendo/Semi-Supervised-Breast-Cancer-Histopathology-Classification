@@ -124,6 +124,8 @@ def get_shared_arguments():
                         help='Which transformation to use and and the parameters of the transformation')
     parser.add_argument('--fine_tune', nargs="?", type=str2bool, default=None,
                         help='Perform fine-tuning on last block and fc')
+    parser.add_argument('--increase_dilation', nargs="?", type=str2bool, default='True',
+                        help='Increase dilation in the layers')
 
     args = parser.parse_args()
     print('Printing arguments: ', [(str(key), str(value)) for (key, value) in vars(args).items()])
