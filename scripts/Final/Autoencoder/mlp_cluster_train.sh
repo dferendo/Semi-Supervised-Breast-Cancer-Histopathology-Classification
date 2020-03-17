@@ -40,7 +40,7 @@ export DATASET_DIR=${TMP}/datasets
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp
 
-python ../../src/RunAutoencoder.py \
+python ../../../src/RunAutoencoder.py \
           --seed ${1} \
           --num_epochs 300 \
           --experiment_name "${3}" \
@@ -48,7 +48,7 @@ python ../../src/RunAutoencoder.py \
           --continue_from_epoch -1 \
           \
           --batch_size 20 \
-          --dataset_location "${DATASET_DIR}" \
+          --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
           --magnification ${2} \
           \
           --image_num_channels 3 \
