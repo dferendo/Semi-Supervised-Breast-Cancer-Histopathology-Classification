@@ -343,7 +343,7 @@ class ExperimentBuilderMixMatch(nn.Module):
         # self.ema_model = self.ema_optimiser.step(model=self.model, ema_model=self.ema_model)
 
         if len(y.shape) > 1:
-            y = torch.argmax(y, axis=1)  # convert one hot encoded labels to single integer labels
+            y = torch.argmax(y, dim=1)  # convert one hot encoded labels to single integer labels
 
         _, predicted = torch.max(logits_x.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy

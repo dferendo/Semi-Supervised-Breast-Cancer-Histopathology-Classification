@@ -50,6 +50,7 @@ python ../../../src/main.py \
           --batch_size 20 \
           --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
           --magnification ${2} \
+          --multi_class "False" \
           --labelled_images_amount ${3} \
           \
           --image_num_channels 3 \
@@ -77,6 +78,7 @@ python ../../../src/main.py \
           --weight_decay_coefficient 0.000001 \
           --learn_rate_max 0.001 \
           --learn_rate_min 0.00001 \
+          --nesterov "True" \
           --optim_type "SGD" \
           --momentum 0.9 \
           --sched_type "FixMatchCos" \
