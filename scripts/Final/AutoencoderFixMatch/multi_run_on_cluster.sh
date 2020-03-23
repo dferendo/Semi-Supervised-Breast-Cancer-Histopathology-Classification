@@ -1,6 +1,6 @@
 #!/bin/sh
 
-seeds=(4324 342432 764365)
+seeds=(324 111 2332 5445 3433)
 magnifications=("40X" "100X" "200X" "400X")
 autoencoder_locations=("../Autoencoder/experiments/autoencoder_342432_40X/saved_models/" \
                        "../Autoencoder/experiments/autoencoder_4324_100X/saved_models/" \
