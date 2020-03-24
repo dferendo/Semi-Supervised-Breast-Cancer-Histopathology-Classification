@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 from ERF_Scheduler import ERF
 
 from storage_utils import save_statistics
-
+from sklearn.metrics import f1_score, precision_score, recall_score
 
 class WeightEMA(object):
     def __init__(self, model, ema_model, lr, alpha=0.999):
@@ -370,7 +370,15 @@ class ExperimentBuilderMixMatch(nn.Module):
         loss = F.cross_entropy(out, y)  # compute loss
         _, predicted = torch.max(out.data, 1)  # get argmax of predictions
         accuracy = np.mean(list(predicted.eq(y.data).cpu()))  # compute accuracy
-        return loss.data.detach().cpu().numpy(), accuracy
+
+        y_cpu = y.data.cpu()
+        predicted_cpu = predicted.cpu()
+
+        f1 = f1_score(y_cpu, predicted_cpu, average='macro')
+        precision = precision_score(y_cpu, predicted_cpu, average='macro')
+        recall = recall_score(y_cpu, predicted_cpu, average='macro')
+
+        return loss.data.detach().cpu().numpy(), accuracy, f1, precision, recall
 
     def save_model(self, model_save_dir, model_save_name, model_idx, state):
         """
@@ -418,9 +426,14 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         with tqdm.tqdm(total=len(self.val_data), file=sys.stdout) as pbar_val:  # create a progress bar for validation
             for x, y in self.val_data:  # get data batches
-                loss, accuracy = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
+                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x, y=y)  # run a validation iter
+
                 current_epoch_losses["val_loss"].append(loss)  # add current iter loss to val loss list.
                 current_epoch_losses["val_acc"].append(accuracy)  # add current iter acc to val acc lst.
+                current_epoch_losses["val_f1"].append(f1)
+                current_epoch_losses["val_precision"].append(precision)
+                current_epoch_losses["val_recall"].append(recall)
+
                 pbar_val.update(1)  # add 1 step to the progress bar
                 pbar_val.set_description("loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))
 
@@ -430,10 +443,15 @@ class ExperimentBuilderMixMatch(nn.Module):
 
         with tqdm.tqdm(total=len(self.test_data), file=sys.stdout) as pbar_test:  # ini a progress bar
             for x, y in self.test_data:  # sample batch
-                loss, accuracy = self.run_evaluation_iter(x=x,
+                loss, accuracy, f1, precision, recall = self.run_evaluation_iter(x=x,
                                                           y=y)  # compute loss and accuracy by running an evaluation step
+
                 current_epoch_losses["test_loss"].append(loss)  # save test loss
                 current_epoch_losses["test_acc"].append(accuracy)  # save test accuracy
+                current_epoch_losses["test_f1"].append(f1)
+                current_epoch_losses["test_precision"].append(precision)
+                current_epoch_losses["test_recall"].append(recall)
+
                 pbar_test.update(1)  # update progress bar status
                 pbar_test.set_description(
                     "loss: {:.4f}, accuracy: {:.4f}".format(loss, accuracy))  # update progress bar string output
