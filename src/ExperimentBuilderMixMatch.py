@@ -475,10 +475,12 @@ class ExperimentBuilderMixMatch(nn.Module):
         :return: The summary current_epoch_losses from starting epoch to total_epochs.
         """
         total_losses = {"train_acc": [], "train_loss": [], "val_acc": [],
-                        "val_loss": [], "curr_epoch": []}  # initialize a dict to keep the per-epoch metrics
+                        "val_loss": [], "val_f1": [], "val_precision": [], "val_recall": [],
+                        "curr_epoch": []}  # initialize a dict to keep the per-epoch metrics
         for i, epoch_idx in enumerate(range(self.starting_epoch, self.num_epochs)):
             epoch_start_time = time.time()
-            current_epoch_losses = {"train_acc": [], "train_loss": [], "val_acc": [], "val_loss": []}
+            current_epoch_losses = {"train_acc": [], "train_loss": [], "val_acc": [], "val_loss": [],
+                                    "val_f1": [], "val_precision": [], "val_recall": []}
 
             current_epoch_losses = self.run_training_epoch(current_epoch_losses, current_epoch=epoch_idx)
             current_epoch_losses = self.run_validation_epoch(current_epoch_losses)
@@ -524,7 +526,8 @@ class ExperimentBuilderMixMatch(nn.Module):
         self.load_model(model_save_dir=self.experiment_saved_models, model_idx=self.best_val_model_idx,
                         # load best validation model
                         model_save_name="train_model")
-        current_epoch_losses = {"test_acc": [], "test_loss": []}  # initialize a statistics dict
+        current_epoch_losses = {"test_acc": [], "test_loss": [], "test_f1": [], "test_precision": [],
+                                "test_recall": []}  # initialize a statistics dict
 
         current_epoch_losses = self.run_testing_epoch(current_epoch_losses=current_epoch_losses)
 
