@@ -37,7 +37,8 @@ def print_test_summary(path_to_read):
 
 
 def print_validation_summary(path_to_read, epoch_amount):
-    columns = ['Seed', 'Magnification', 'labeled_images', 'block_config', 'number_of_filters', 'growth_rate', 'use_se', 'increase_dilation',
+    columns = ['Seed', 'Magnification', 'labeled_images', 'block_config', 'number_of_filters', 'growth_rate', 'use_se',
+               'increase_dilation', 'loss_lambda_u', 'dropout_value', 'weight_decay_value', 'learning_rate',
                'Train acc', 'Train loss', 'Val acc', 'Val loss', 'Val f1', 'Val Precision', 'Val Recall', 'Epoch']
 
     with open('results_val.csv', 'w', newline='') as csv_file:
@@ -56,8 +57,14 @@ def print_validation_summary(path_to_read, epoch_amount):
             growth_rate = all_params[5]
             use_se = all_params[6]
             increase_dilation = all_params[7]
+            loss_lambda_u = all_params[8]
+            dropout_value = all_params[9]
+            weight_decay_value = all_params[10]
+            learning_rate = all_params[11]
 
-            row_to_output.extend([seed, magnification, labeled_images, block_config, number_of_filters, growth_rate, use_se, increase_dilation])
+            row_to_output.extend([seed, magnification, labeled_images, block_config, number_of_filters, growth_rate,
+                                  use_se, increase_dilation, loss_lambda_u, dropout_value, weight_decay_value,
+                                  learning_rate])
 
             val_file = os.path.join(folder, 'result_outputs', 'summary.csv')
 
