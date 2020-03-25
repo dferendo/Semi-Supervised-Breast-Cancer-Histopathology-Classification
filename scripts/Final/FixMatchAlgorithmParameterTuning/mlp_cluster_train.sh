@@ -77,9 +77,9 @@ python ../../../src/main.py \
         --optim_type "SGD" \
         --momentum 0.9 \
         --nesterov "True" \
-        --weight_decay_coefficient 0.000001 \
+        --weight_decay_coefficient 0.0001 \
         --sched_type "FixMatchCos" \
-        --learn_rate_max 0.001 \
+        --learn_rate_max 0.005 \
         --drop_rate 0 \
         --transformation_labeled_parameters "0, 0.5" \
         --transformation_unlabeled_parameters "0, 0.5" \
