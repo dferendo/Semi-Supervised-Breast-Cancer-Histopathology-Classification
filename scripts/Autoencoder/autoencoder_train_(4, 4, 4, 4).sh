@@ -3,7 +3,7 @@
 export DATASET_DIR="../../data/BreaKHis_v1/"
 
 magnifications=("40X")
-use_ses=("True")
+use_ses=("True" "False")
 seeds=(9392)
 
 for seed in "${seeds[@]}"

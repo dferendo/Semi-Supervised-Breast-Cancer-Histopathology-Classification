@@ -60,7 +60,7 @@ python ../../../src/RunAutoencoder.py \
           --growth_rate 32 \
           --compression 0.5 \
           --bottleneck_factor 4 \
-          --use_se "True" \
+          --use_se "False" \
           --se_reduction 16 \
           \
           --weight_decay_coefficient 0.000001 \
