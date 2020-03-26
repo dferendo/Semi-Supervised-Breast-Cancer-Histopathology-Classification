@@ -283,9 +283,9 @@ class ExperimentBuilderMixMatch(nn.Module):
 
             x = x.to(self.device, non_blocking=True)
             y = y.to(self.device, non_blocking=True)
-            mixed_input, mixed_target = self.mixup(x, y, u_list, q)
+            # mixed_input, mixed_target = self.mixup(x, y, u_list, q)
 
-            return mixed_input, mixed_target
+            return x, y
 
     def run_train_iter(self, x, u, y, batch_num, batch_total, epoch_num):
         """

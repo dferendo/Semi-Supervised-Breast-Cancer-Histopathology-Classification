@@ -47,46 +47,40 @@ python ../../../src/main.py \
           --use_gpu "True" \
           --continue_from_epoch -1 \
           \
-          --batch_size 10 \
+          --batch_size 20 \
           --dataset_location "${DATASET_DIR}/BreaKHis_v1" \
           --magnification ${2} \
-          --multi_class "False" \
           --labelled_images_amount ${3} \
           \
           --image_num_channels 3 \
           --image_height 224 \
           --image_width 224 \
           \
-          --block_config "4, 4, 4, 4" \
-          --initial_num_filters 64 \
-          --growth_rate 32 \
+          --block_config "6, 12, 24, 16" \
+          --initial_num_filters 24 \
+          --growth_rate 12 \
           --compression 0.5 \
           --bottleneck_factor 4 \
-          --use_se "True" \
+          --use_se "False" \
           --se_reduction 16 \
-          --increase_dilation "True" \
+          --increase_dilation "False" \
           \
-          --use_mix_match "False" \
-          --loss_lambda_u 1 \
+          --use_mix_match "True" \
+          --loss_lambda_u 75 \
           \
-          --use_fix_match "True" \
-          --n_raug 1 \
-          --m_raug 10 \
-          --unlabelled_factor 3 \
-          --fm_conf_threshold 0.85 \
+          --use_fix_match "False" \
           \
-          --weight_decay_coefficient 0.0001 \
-          --learn_rate_max 0.005 \
-          --learn_rate_min 0.00001 \
-          --nesterov "True" \
+          --weight_decay_coefficient 0.00001 \
+          --learn_rate_max 0.01 \
+          --learn_rate_min 0.000001 \
           --optim_type "SGD" \
           --momentum 0.9 \
-          --sched_type "FixMatchCos" \
-          --drop_rate 0 \
+          --sched_type "Cos" \
+          --drop_rate 0.2 \
           \
           --transformation_labeled_parameters "0, 0.5" \
           --transformation_unlabeled_parameters "0, 0.5" \
-          --transformation_unlabeled_strong_parameters "0, 0.5"
+          --transformation_unlabeled_strong_parameters "2, 0"
 
 #            --pretrained_weights_locations "./1layer_dilation_lrelucbam_2exc_noaug_lrelu_1bn_autoencoder_test_(4,4,4,4)_40X_True/saved_models/"
 

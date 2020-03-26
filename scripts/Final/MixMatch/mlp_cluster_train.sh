@@ -76,7 +76,7 @@ python ../../../src/main.py \
           --optim_type "SGD" \
           --momentum 0.9 \
           --sched_type "Cos" \
-          --drop_rate 0.2 \
+          --drop_rate 0.1 \
           \
           --transformation_labeled_parameters "0, 0.5" \
           --transformation_unlabeled_parameters "0, 0.5" \
