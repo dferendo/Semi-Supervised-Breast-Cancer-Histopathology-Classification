@@ -5,11 +5,11 @@ export DATASET_DIR="../../data/BreaKHis_v1/"
 loss_lambda_u=1
 
 
-seeds=(9392 342432 764365)
+seeds=(43242 342432 764365)
 magnifications=("40X")
 labeled_images_amount=(5)
 
-transformation_labeled_parameters=("0, 0.5" "0, 0.5" "0, 0.5" "0, 0.5")
+transformation_labeled_parameters=("0, 0.5, 1, 0.5" "0, 0.5, 1, 0.5" "0, 0.5, 1, 0.5" "0, 0.5, 1, 0.5")
 transformation_unlabeled_parameters=("0, 0.5, 1, 0.5" "0, 0.5, 1, 0.5, 2, 20" "0, 0.5, 1, 0.5, 3, 0.1, 0.1" "0, 0.5, 1, 0.5, 2, 20, 3, 0.1, 0.1")
 transformation_unlabeled_strong_parameters=("0, 0.5" "0, 0.5" "0, 0.5" "0, 0.5")
 
