@@ -253,20 +253,23 @@ class ExperimentBuilderMixMatch(nn.Module):
         all_targets.extend([q for i in range(len(u_list))])
         all_targets = torch.cat(all_targets, dim=0)
 
-        l = np.random.beta(self.mixup_alpha, self.mixup_alpha, size=all_inputs.shape[0])
-        l = np.maximum(l, 1 - l)
-        l = torch.from_numpy(l).float().to(self.device)
+        # l = np.random.beta(self.mixup_alpha, self.mixup_alpha, size=all_inputs.shape[0])
+        # l = np.maximum(l, 1 - l)
+        # l = torch.from_numpy(l).float().to(self.device)
+        #
+        # idx = torch.randperm(all_inputs.size(0))
+        #
+        # input_a, input_b = all_inputs, all_inputs[idx]
+        # target_a, target_b = all_targets, all_targets[idx]
+        #
+        # l_t = l.view((l.shape[0], 1))
+        # mixed_target = l_t * target_a + (1 - l_t) * target_b
+        #
+        # l_i = l.view((l.shape[0], 1, 1, 1))
+        # mixed_input = l_i * input_a + (1 - l_i) * input_b
 
-        idx = torch.randperm(all_inputs.size(0))
-
-        input_a, input_b = all_inputs, all_inputs[idx]
-        target_a, target_b = all_targets, all_targets[idx]
-
-        l_t = l.view((l.shape[0], 1))
-        mixed_target = l_t * target_a + (1 - l_t) * target_b
-
-        l_i = l.view((l.shape[0], 1, 1, 1))
-        mixed_input = l_i * input_a + (1 - l_i) * input_b
+        mixed_input = all_inputs
+        mixed_target = all_targets
 
         return mixed_input, mixed_target
 
@@ -283,9 +286,9 @@ class ExperimentBuilderMixMatch(nn.Module):
 
             x = x.to(self.device, non_blocking=True)
             y = y.to(self.device, non_blocking=True)
-            # mixed_input, mixed_target = self.mixup(x, y, u_list, q)
+            mixed_input, mixed_target = self.mixup(x, y, u_list, q)
 
-            return x, y
+            return mixed_input, mixed_target
 
     def run_train_iter(self, x, u, y, batch_num, batch_total, epoch_num):
         """
