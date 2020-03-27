@@ -90,7 +90,7 @@ class SmallSeBlock(nn.Module):
 
         if not self.is_first_layer:
             self.layer_dict['bn_0'] = nn.BatchNorm2d(num_features=out.shape[1])
-            self.layer_dict['bn_0'].forward(out)
+            out = self.layer_dict['bn_0'].forward(out)
             out = F.relu(out)
 
         self.layer_dict['conv_1'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3),
@@ -99,7 +99,7 @@ class SmallSeBlock(nn.Module):
         out = self.layer_dict['conv_1'].forward(out)
 
         self.layer_dict['bn_1'] = nn.BatchNorm2d(num_features=out.shape[1])
-        self.layer_dict['bn_1'].forward(out)
+        out = self.layer_dict['bn_1'].forward(out)
         out = F.relu(out)
 
         self.layer_dict['conv_2'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1],
@@ -108,7 +108,7 @@ class SmallSeBlock(nn.Module):
         out = self.layer_dict['conv_2'].forward(out)
 
         self.layer_dict['bn_2'] = nn.BatchNorm2d(num_features=out.shape[1])
-        self.layer_dict['bn_2'].forward(out)
+        out = self.layer_dict['bn_2'].forward(out)
         out = F.relu(out)
 
         self.layer_dict['conv_3'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(1, 3), out_channels=out.shape[1],
@@ -117,7 +117,7 @@ class SmallSeBlock(nn.Module):
         out = self.layer_dict['conv_3'].forward(out)
 
         self.layer_dict['bn_3'] = nn.BatchNorm2d(num_features=out.shape[1])
-        self.layer_dict['bn_3'].forward(out)
+        out = self.layer_dict['bn_3'].forward(out)
         out = F.relu(out)
 
         self.layer_dict['conv_4'] = nn.Conv2d(in_channels=out.shape[1], kernel_size=(3, 1), out_channels=out.shape[1],
@@ -136,7 +136,7 @@ class SmallSeBlock(nn.Module):
                                                             bias=self.use_bias, stride=(stride_height, stride_width), dilation=1)
             x = self.layer_dict['conv_resid_reduc'].forward(x)
 
-        out = x + out
+        out += x
 
         return out
 
@@ -144,20 +144,20 @@ class SmallSeBlock(nn.Module):
         out = x
 
         if not self.is_first_layer:
-            self.layer_dict['bn_0'].forward(out)
+            out = self.layer_dict['bn_0'].forward(out)
             out = F.relu(out)
 
         out = self.layer_dict['conv_1'].forward(out)
 
-        self.layer_dict['bn_1'].forward(out)
+        out = self.layer_dict['bn_1'].forward(out)
         out = F.relu(out)
         out = self.layer_dict['conv_2'].forward(out)
 
-        self.layer_dict['bn_2'].forward(out)
+        out = self.layer_dict['bn_2'].forward(out)
         out = F.relu(out)
         out = self.layer_dict['conv_3'].forward(out)
 
-        self.layer_dict['bn_3'].forward(out)
+        out = self.layer_dict['bn_3'].forward(out)
         out = F.relu(out)
         out = self.layer_dict['conv_4'].forward(out)
 

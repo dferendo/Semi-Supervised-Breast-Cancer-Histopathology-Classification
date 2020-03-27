@@ -1,5 +1,4 @@
-import os
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 
 import os
@@ -11,6 +10,7 @@ class BreaKHisDataset(Dataset):
     """
     Reading the BreaKHis Dataset. Please keep the original dataset structure
     """
+
     def __init__(self, df, transform=None):
         self.transform = transform
         self.df = df
@@ -23,18 +23,102 @@ class BreaKHisDataset(Dataset):
         class_name = self.df.iloc[idx]['Class Name']
 
         if class_name == 'benign':
-            target = np.array([1, 0])
+            target = np.array([1, 0]).astype(np.float32)
         else:
-            target = np.array([0, 1])
+            target = np.array([0, 1]).astype(np.float32)
 
         image_location = self.df.iloc[idx]['Image Location']
-
         img = Image.open(image_location)
 
         if self.transform is not None:
             img = self.transform(img)
 
         return img, target
+
+
+class BreaKHisDatasetMultiClass(Dataset):
+    """
+    Reading the BreaKHis Dataset. Please keep the original dataset structure
+    """
+
+    def __init__(self, df, transform=None):
+        self.transform = transform
+        self.df = df
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        # Load the image from the file and return the label
+        sub_class_name = self.df.iloc[idx]['Subclass Name']
+
+        if sub_class_name == 'adenosis':
+            target = np.array([1, 0, 0, 0, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'fibroadenoma':
+            target = np.array([0, 1, 0, 0, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'phyllodes_tumor':
+            target = np.array([0, 0, 1, 0, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'tubular_adenoma':
+            target = np.array([0, 0, 0, 1, 0, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'ductal_carcinoma':
+            target = np.array([0, 0, 0, 0, 1, 0, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'lobular_carcinoma':
+            target = np.array([0, 0, 0, 0, 0, 1, 0, 0]).astype(np.float32)
+        elif sub_class_name == 'mucinous_carcinoma':
+            target = np.array([0, 0, 0, 0, 0, 0, 1, 0]).astype(np.float32)
+        else:
+            target = np.array([0, 0, 0, 0, 0, 0, 0, 1]).astype(np.float32)
+
+        image_location = self.df.iloc[idx]['Image Location']
+        img = Image.open(image_location)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, target
+
+
+class BreaKHisDatasetUnlabelled(Dataset):
+    """
+    Reading the BreaKHis Dataset. Please keep the original dataset structure
+    """
+
+    def __init__(self, df, transform=None):
+        self.transform = transform
+        self.df = df
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx):
+        image_location = self.df.iloc[idx]['Image Location']
+        img = Image.open(image_location)
+
+        all_transformations = []
+
+        if self.transform is not None:
+            for transformation in self.transform:
+                all_transformations.append(transformation(img))
+
+        return all_transformations
+
+
+class DataParameters(object):
+    # From 0 to 1
+    val_size = 0.2
+    test_size = 0.2
+    magnification = None
+    unlabeled_split = None
+    labelled_images_amount = None
+    unlabeled_transformations = None
+    num_workers = 4
+
+    def __init__(self, data_root, batch_size, transformations, transformations_test, multi_class):
+        self.data_root = data_root
+        self.batch_size = batch_size
+        self.transformations = transformations
+        self.transformations_test = transformations_test
+        self.multi_class = multi_class
 
 
 def print_statistics(df, dataset):
@@ -85,16 +169,19 @@ def get_all_images_location_with_classes(data_root):
     return dataset_temp
 
 
-def split_dataset_into_sets(dataset, val_size, test_size, magnification=None):
+def split_dataset_into_sets(data_parameters, dataset):
     """
     Note: The patients are disjoints from the sets (Ie the same patient is not found in multiple sets)
-    :param dataset:
-    :param val_size:
-    :param test_size:
-    :param magnification:
+    :param data_parameters:
     :return:
     """
     columns = ['Patient Name', 'Class Name', 'Subclass Name', 'Magnification', 'Image Location']
+
+    magnification = data_parameters.magnification
+    val_size = data_parameters.val_size
+    test_size = data_parameters.test_size
+    unlabeled_split = data_parameters.unlabeled_split
+    labelled_images_amount = data_parameters.labelled_images_amount
 
     df = pd.DataFrame(dataset, columns=columns)
 
@@ -127,41 +214,105 @@ def split_dataset_into_sets(dataset, val_size, test_size, magnification=None):
 
             current_patients_amount += 1
 
+    df_train_labeled = pd.DataFrame(columns=columns)
+    df_train_unlabeled = pd.DataFrame(columns=columns)
+
+    if unlabeled_split is not None and unlabeled_split != 0.:
+        print(unlabeled_split)
+        assert 0 < unlabeled_split < 1
+        assert labelled_images_amount is None
+
+        # Group by subclasses and into two dataframes, one with labeled, one without.
+        df_trained_grouped_by_subclass = df_train.groupby(['Subclass Name'])
+
+        for group_name, df_group in df_trained_grouped_by_subclass:
+            split_group = np.array_split(df_group.sample(frac=1), [int(unlabeled_split * len(df_group))])
+
+            df_train_unlabeled = df_train_unlabeled.append(split_group[0])
+            df_train_labeled = df_train_labeled.append(split_group[1])
+    elif labelled_images_amount is not None:
+        assert unlabeled_split is None or unlabeled_split == 0
+        assert 0 < labelled_images_amount <= 50
+
+        # Group by subclasses and into two dataframes, one with labeled, one without.
+        df_trained_grouped_by_subclass = df_train.groupby(['Subclass Name'])
+
+        for group_name, df_group in df_trained_grouped_by_subclass:
+            randomize_group = df_group.sample(frac=1)
+
+            df_train_labeled = df_train_labeled.append(randomize_group[:labelled_images_amount])
+            df_train_unlabeled = df_train_unlabeled.append(randomize_group[labelled_images_amount:])
+    else:
+        df_train_labeled = df_train
+
     print(f'Total number of images considered: {len(df)}')
-    print_statistics(df_train, 'Train')
+    print_statistics(df_train_labeled, 'Train')
+    print_statistics(df_train_unlabeled, 'Unlabeled Trained')
     print_statistics(df_val, 'Validation')
     print_statistics(df_test, 'Test')
 
-    return df_train, df_val, df_test
+    return df_train_labeled, df_train_unlabeled, df_val, df_test
 
 
-def get_datasets(data_root, transforms, val_size=0.2, test_size=0.2, magnification=None):
-    dataset = get_all_images_location_with_classes(data_root)
-    df_train, df_val, df_test = split_dataset_into_sets(dataset, val_size, test_size, magnification)
+def get_datasets(data_parameters):
+    def _init_fn(worker_id):
+        np.random.seed(int(data_parameters.seed))
 
-    return BreaKHisDataset(df_train, transforms), BreaKHisDataset(df_val, transforms), BreaKHisDataset(df_test, transforms)
+    dataset = get_all_images_location_with_classes(data_parameters.data_root)
+    df_train_labeled, df_train_unlabeled, df_val, df_test = split_dataset_into_sets(data_parameters, dataset)
+
+    if data_parameters.multi_class:
+        train_dataset = BreaKHisDatasetMultiClass(df_train_labeled, data_parameters.transformations)
+        val_dataset = BreaKHisDatasetMultiClass(df_val, data_parameters.transformations_test)
+        test_dataset = BreaKHisDatasetMultiClass(df_test, data_parameters.transformations_test)
+    else:
+        train_dataset = BreaKHisDataset(df_train_labeled, data_parameters.transformations)
+        val_dataset = BreaKHisDataset(df_val, data_parameters.transformations_test)
+        test_dataset = BreaKHisDataset(df_test, data_parameters.transformations_test)
+
+    train_loader = DataLoader(train_dataset, batch_size=data_parameters.batch_size, shuffle=True,
+                              num_workers=data_parameters.num_workers, drop_last=True,
+                              worker_init_fn=_init_fn)
+
+    val_loader = DataLoader(val_dataset, batch_size=data_parameters.batch_size, shuffle=True,
+                            num_workers=data_parameters.num_workers, drop_last=True,
+                            worker_init_fn=_init_fn)
+
+    test_loader = DataLoader(test_dataset, batch_size=data_parameters.batch_size, shuffle=True,
+                             num_workers=data_parameters.num_workers, drop_last=True,
+                             worker_init_fn=_init_fn)
+
+    if (
+            data_parameters.unlabeled_split is not None and data_parameters.unlabeled_split != 0.) or data_parameters.labelled_images_amount is not None:
+        unlabelled_train_dataset = BreaKHisDatasetUnlabelled(df_train_unlabeled,
+                                                             data_parameters.unlabeled_transformations)
+
+        train_unlabeled_loader = DataLoader(unlabelled_train_dataset,
+                                            batch_size=data_parameters.batch_size * data_parameters.unlabelled_factor,
+                                            shuffle=True, num_workers=data_parameters.num_workers, drop_last=True)
+    else:
+        train_unlabeled_loader = None
+
+    return train_loader, train_unlabeled_loader, val_loader, test_loader
 
 
-def calculate_the_mean_and_variance_of_the_dataset(train_loader, validation_loader, test_loader):
+def calculate_the_mean_and_variance_of_the_dataset(loader):
     """
     Reference: https://discuss.pytorch.org/t/about-normalization-using-pre-trained-vgg16-networks/23560/6
     :param train_loader:
-    :param validation_loader:
-    :param test_loader:
     :return:
     """
     mean = 0.
     std = 0.
     nb_samples = 0.
 
-    for loader in [train_loader, validation_loader, test_loader]:
-        for data in loader:
-            data = data[0]
-            batch_samples = data.size(0)
-            data = data.view(batch_samples, data.size(1), -1)
-            mean += data.mean(2).sum(0)
-            std += data.std(2).sum(0)
-            nb_samples += batch_samples
+    for data in loader:
+        data = data[0]
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
 
     mean /= nb_samples
     std /= nb_samples
